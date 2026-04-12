@@ -8,7 +8,7 @@ BIRE shifts healthcare monitoring from reactive rule-based systems to predictive
 
 ---
 
-## 🎯 Objective
+##  Objective
 
 To transform raw physiological time-series data into actionable risk insights by:
 
@@ -18,7 +18,7 @@ To transform raw physiological time-series data into actionable risk insights by
 
 ---
 
-## 🧠 System Architecture
+##  System Architecture
 
 BIRE is structured as a multi-layer pipeline:
 
@@ -46,7 +46,7 @@ Transforms raw clinical data into a clean, aligned, feature-rich dataset.
 
 ---
 
-## ⚙️ Current Implementation (Cycle I)
+##  Current Implementation (Cycle I)
 
 The system processes wide-format patient time-series data:
 
