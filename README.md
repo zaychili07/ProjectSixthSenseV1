@@ -127,17 +127,6 @@ See `POLICY.md` for full details.
 ```bash
 python src/bire/pipeline/main_pipeline.py
 
-## 🔐 Responsible Use
-
-This project is intended for **research and educational purposes only**.
-
-- No personally identifiable information (PII) should be used
-- Only synthetic or de-identified datasets are permitted
-- BIRE is a **decision-support system**, not a medical authority
-- Clinical deployment requires formal validation and regulatory approval
-
-See `POLICY.md` for full details.
-
 ---
 
 
