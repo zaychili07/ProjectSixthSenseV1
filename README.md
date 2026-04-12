@@ -52,7 +52,26 @@ The system processes wide-format patient time-series data:
 
 ### Input Format
 
-## Responsible Use Policy
-BIRE is a research and educational project. This repository must only use synthetic, anonymized, de-identified, or publicly approved datasets. No personally identifiable information should be uploaded or processed here. BIRE is intended for decision-support research only and does not replace clinical judgment, diagnosis, or licensed medical care. Any future real-world deployment would require validation, governance review, and regulatory compliance.
 
+---
+
+## 🔐 Responsible Use
+
+This project is intended for **research and educational purposes only**.
+
+- No personally identifiable information (PII) should be used
+- Only synthetic or de-identified datasets are permitted
+- BIRE is a **decision-support system**, not a medical authority
+- Clinical deployment requires formal validation and regulatory approval
+
+See `POLICY.md` for full details.
+
+---
+
+## 🚀 Getting Started
+
+### Run Cycle I Pipeline
+
+```bash
+python src/bire/pipeline/main_pipeline.py
 Cycle I: Data Standardization & Temporal Alignment transforms raw heterogeneous clinical streams into a unified, time-consistent patient state representation. This layer performs schema mapping, unit normalization, timestamp synchronization, missing-data handling, and quality filtering to produce model-ready temporal sequences for downstream anomaly detection and predictive inference.
