@@ -127,6 +127,4 @@ See `POLICY.md` for full details.
 ```bash
 python src/bire/pipeline/main_pipeline.py
 
----
-
 
