@@ -1,4 +1,4 @@
- Project Sixth Sense – Bio-Intelligence Risk Engine (BIRE)
+** Project Sixth Sense – Bio-Intelligence Risk Engine (BIRE)**
 🧬 Advanced AI System for Early Clinical Deterioration and Epidemic Risk Detection
  Abstract
 
