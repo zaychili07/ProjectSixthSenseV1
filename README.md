@@ -1,6 +1,6 @@
-🧠 Project Sixth Sense – Bio-Intelligence Risk Engine (BIRE)
+ Project Sixth Sense – Bio-Intelligence Risk Engine (BIRE)
 🧬 Advanced AI System for Early Clinical Deterioration and Epidemic Risk Detection
-📌 Abstract
+ Abstract
 
 Project Sixth Sense – Bio-Intelligence Risk Engine (BIRE) is a modular artificial intelligence system designed to detect early signs of patient deterioration and emerging epidemiological threats before they become clinically or publicly apparent.
 
@@ -8,7 +8,7 @@ Unlike traditional rule-based systems such as Pediatric Early Warning Score (PEW
 
 The system is designed to transition healthcare monitoring from reactive decision-making to predictive intelligence, enabling earlier intervention and improved outcomes at both individual and population levels.
 
-🎯 Problem Statement
+ Problem Statement
 
 Traditional early warning systems such as PEWS rely on:
 
@@ -20,7 +20,7 @@ Lack of temporal awareness
 No learning from data distributions
 Poor adaptability to evolving patient conditions
 No integration of multi-source signals
-🚀 Proposed Solution: BIRE
+Proposed Solution: BIRE
 
 BIRE introduces a multi-layer AI architecture that replaces static scoring with learned, adaptive risk inference.
 
