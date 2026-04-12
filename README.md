@@ -27,7 +27,13 @@ BIRE introduces a multi-layer AI architecture that replaces static scoring with 
 It integrates:
 
 Clinical physiological data
+
 Temporal trend modeling
+
 Anomaly detection
+
 Predictive machine learning models
+
 Fusion-based decision logic
+
+Cycle I: Data Standardization & Temporal Alignment transforms raw heterogeneous clinical streams into a unified, time-consistent patient state representation. This layer performs schema mapping, unit normalization, timestamp synchronization, missing-data handling, and quality filtering to produce model-ready temporal sequences for downstream anomaly detection and predictive inference.
