@@ -1,40 +1,56 @@
-** Project Sixth Sense – Bio-Intelligence Risk Engine (BIRE)**
-🧬 Advanced AI System for Early Clinical Deterioration and Epidemic Risk Detection
- Abstract
+# 🧬 Project Sixth Sense – Bio-Intelligence Risk Engine (BIRE)
 
-Project Sixth Sense – Bio-Intelligence Risk Engine (BIRE) is a modular artificial intelligence system designed to detect early signs of patient deterioration and emerging epidemiological threats before they become clinically or publicly apparent.
+## Overview
 
-Unlike traditional rule-based systems such as Pediatric Early Warning Score (PEWS), BIRE leverages machine learning, time-series analysis, anomaly detection, and multi-signal fusion to generate probabilistic risk assessments in real time.
+Project Sixth Sense – Bio-Intelligence Risk Engine (BIRE) is a modular artificial intelligence system designed to detect early signs of patient deterioration and emerging epidemiological risks before they become clinically or publicly apparent.
 
-The system is designed to transition healthcare monitoring from reactive decision-making to predictive intelligence, enabling earlier intervention and improved outcomes at both individual and population levels.
+BIRE shifts healthcare monitoring from reactive rule-based systems to predictive, data-driven intelligence using time-series modeling, anomaly detection, and multi-signal feature analysis.
 
- Problem Statement
+---
 
-Traditional early warning systems such as PEWS rely on:
+## 🎯 Objective
 
-Static thresholds
-Rule-based scoring
-Snapshot-based vital sign evaluation
-Limitations:
-Lack of temporal awareness
-No learning from data distributions
-Poor adaptability to evolving patient conditions
-No integration of multi-source signals
-Proposed Solution: BIRE
+To transform raw physiological time-series data into actionable risk insights by:
 
-BIRE introduces a multi-layer AI architecture that replaces static scoring with learned, adaptive risk inference.
+- Detecting early clinical deterioration
+- Identifying anomalous physiological patterns
+- Enabling predictive intervention at both patient and population levels
 
-It integrates:
+---
 
-Clinical physiological data
+## 🧠 System Architecture
 
-Temporal trend modeling
+BIRE is structured as a multi-layer pipeline:
 
-Anomaly detection
+### Cycle I: Data Standardization & Feature Engineering (Current Phase)
 
-Predictive machine learning models
+Transforms raw clinical data into a clean, aligned, feature-rich dataset.
 
-Fusion-based decision logic
+**Core responsibilities:**
+- Schema standardization
+- Timestamp alignment (fixed intervals)
+- Physiological validation
+- Duplicate handling
+- Conservative missing-data handling
+- Temporal feature generation
+- Sequence construction
+
+---
+
+### Future Cycles
+
+- **Cycle II:** Anomaly Detection (unsupervised signal deviation detection)
+- **Cycle III:** Predictive Risk Modeling (deterioration probability)
+- **Cycle IV:** Multi-Signal Fusion Engine
+- **Cycle V:** Epidemiological Risk Detection
+
+---
+
+## ⚙️ Current Implementation (Cycle I)
+
+The system processes wide-format patient time-series data:
+
+### Input Format
 
 ## Responsible Use Policy
 BIRE is a research and educational project. This repository must only use synthetic, anonymized, de-identified, or publicly approved datasets. No personally identifiable information should be uploaded or processed here. BIRE is intended for decision-support research only and does not replace clinical judgment, diagnosis, or licensed medical care. Any future real-world deployment would require validation, governance review, and regulatory compliance.
