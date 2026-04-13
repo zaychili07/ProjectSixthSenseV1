@@ -9,6 +9,12 @@ def add_temporal_features(
     patient_df = patient_df.sort_values("timestamp").copy()
     present_signals = [c for c in signal_cols if c in patient_df.columns]
 
+def add_features_all_patients(df, signal_cols, window_size=6):
+    return (
+        df.groupby("patient_id", group_keys=False)
+          .apply(lambda x: add_temporal_features(x, signal_cols, window_size))
+          .reset_index(drop=True)
+    )
     for col in present_signals:
         patient_df[f"{col}_lag1"] = patient_df[col].shift(1)
         patient_df[f"{col}_lag2"] = patient_df[col].shift(2)
