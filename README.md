@@ -166,6 +166,107 @@ This structured dataset serves as the input for:
 * anomaly detection models
 * predictive risk scoring
 
+## ⚙️ Cycle II: Modeling & Anomaly Detection Engine
+
+Cycle II introduces the first **intelligence layer** of BIRE, transforming engineered features into actionable risk signals.
+
+---
+
+### 🎯 Objectives
+
+* Detect early physiological deterioration
+* Identify abnormal patterns in patient time-series data
+* Generate continuous **risk scores** for each patient
+
+---
+
+### 🧠 Modeling Approach
+
+#### 1. Supervised Risk Prediction
+
+A binary classification model predicts the likelihood of deterioration within a defined future time window.
+
+**Inputs:**
+
+* Feature-engineered dataset from Cycle I
+
+**Outputs:**
+
+* Probability of deterioration (`risk_score ∈ [0,1]`)
+
+**Baseline Models:**
+
+* Logistic Regression (interpretable baseline)
+* Gradient Boosting (XGBoost / LightGBM)
+
+---
+
+#### 2. Anomaly Detection (Unsupervised)
+
+Captures deviations from normal physiological behavior.
+
+**Techniques (planned):**
+
+* Isolation Forest
+* Statistical deviation scoring
+* Rolling z-score thresholds
+
+**Purpose:**
+
+* Detect novel or rare patterns
+* Complement supervised predictions
+
+---
+
+### 📊 Evaluation Metrics
+
+Due to class imbalance and clinical context:
+
+* AUROC (discrimination ability)
+* AUPRC (performance on rare events)
+* Recall (sensitivity to deterioration)
+* Precision (false alarm control)
+* F1 Score
+
+---
+
+### ⚠️ Validation Strategy
+
+To ensure realistic performance:
+
+* Data is split at the **patient level** (no leakage)
+* Features use **only past information**
+* Evaluation mimics real-time prediction conditions
+
+---
+
+### 📈 Outputs
+
+Cycle II produces:
+
+* `risk_score` (probability of deterioration)
+* `anomaly_score` (deviation from baseline)
+* Model performance metrics
+* Feature importance analysis
+
+---
+
+### 🧩 Integration with BIRE
+
+Cycle II connects:
+
+Feature Engine → Risk Scoring → Response Layer (Cycle III)
+
+This establishes the core **Inference Engine** of BIRE.
+
+---
+
+### 🔄 Current Status
+
+🔄 Model training in progress
+🔄 Target definition under refinement
+🔄 Baseline evaluation underway
+
 
 ## 🔐 Responsible Use
 
