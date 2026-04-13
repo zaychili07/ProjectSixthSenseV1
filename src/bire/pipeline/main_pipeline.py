@@ -45,7 +45,12 @@ def run_cycle1(input_path: str, output_path: str = None):
 
 
 if __name__ == "__main__":
-    input_file = "/kaggle/input/biremockdata/bire_mock_vitals.csv"
-    output_file = "/kaggle/working/bire_cycle1_features.csv"
+    import os
+
+    input_file = os.getenv("BIRE_INPUT_PATH", "data/raw/bire_mock_vitals.csv")
+    output_file = os.getenv("BIRE_OUTPUT_PATH", "data/processed/bire_cycle1_features.csv")
+
+    print(f"Using input: {input_file}")
+    print(f"Saving output to: {output_file}")
 
     run_cycle1(input_file, output_file)
