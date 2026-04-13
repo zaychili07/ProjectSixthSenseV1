@@ -1,0 +1,115 @@
+# 🧬 Project Sixth Sense — Technical Brief
+
+## Overview
+
+Project Sixth Sense is a **Bio-Intelligence Risk Engine (BIRE)** designed to detect early signs of patient deterioration using time-series physiological data.
+
+The system shifts clinical monitoring from static thresholds to **data-driven, temporally-aware intelligence**.
+
+---
+
+## System Architecture
+
+BIRE is structured as a multi-cycle system:
+
+1. **Cycle I — Temporal Feature Engine**
+
+   * Aligns data into 5-minute intervals
+   * Performs leakage-safe feature engineering
+   * Generates ~50 features per patient timestamp
+
+2. **Cycle II — Inference Engine**
+
+   * Predicts deterioration risk using machine learning
+   * Detects anomalies in physiological signals
+   * Outputs continuous risk scores
+
+3. **Cycle III+ — Response & Intelligence Layers (Planned)**
+
+   * Alert generation
+   * Decision support
+   * Multi-signal fusion
+   * Epidemiological pattern detection
+
+---
+
+## Key Technical Contributions
+
+### 1. Leakage-Safe Time-Series Pipeline
+
+* Patient-level grouping
+* Strict temporal ordering
+* Rolling features shifted to avoid future leakage
+
+### 2. Multi-Signal Feature Modeling
+
+For each vital sign:
+
+* Lag features
+* Rate-of-change (delta)
+* Rolling statistics (mean, std, min, max)
+
+Captures:
+
+* short-term trends
+* volatility
+* physiological instability
+
+---
+
+### 3. Modeling Strategy
+
+* Baseline: Logistic Regression
+* Advanced: Gradient Boosting (XGBoost / LightGBM)
+* Evaluation: AUROC, AUPRC, Recall, Precision
+
+Focus:
+
+* early detection sensitivity
+* robustness under class imbalance
+
+---
+
+## Why This Matters
+
+Traditional systems:
+
+* rely on fixed thresholds
+* ignore temporal patterns
+* generate late or noisy alerts
+
+Project Sixth Sense:
+
+* detects deterioration **earlier**
+* adapts to patient-specific dynamics
+* enables **proactive intervention**
+
+---
+
+## Current Status
+
+* Feature engineering pipeline complete ✅
+* Leakage-safe validation confirmed ✅
+* Modeling phase in progress 🔄
+
+---
+
+## Future Directions
+
+* Anomaly detection integration
+* Risk calibration and threshold tuning
+* Patient-level early warning evaluation
+* Real-time alerting system
+* Feedback loops for adaptive learning
+
+---
+
+## Positioning
+
+Project Sixth Sense is not just a model — it is an early-stage **clinical intelligence system** designed for real-time decision support.
+
+---
+
+## Author
+
+Isaiah Washington
