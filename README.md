@@ -40,7 +40,7 @@ This project sits at the intersection of:
 
 ---
 
-## ⚙️ Current Phase: Cycle I (Feature Engineering Engine)
+## ⚙️ Current Phase: Cycle I (Cycle I (Temporal Feature Engineering & Modeling Dataset Construction))
 
 Cycle I transforms raw physiological data into a structured feature matrix for modeling.
 
@@ -102,12 +102,70 @@ src/
 └── pipeline/
 └── main_pipeline.py
 
-## 🔮 Roadmap
+## 🛡️ Data Leakage Prevention
 
-- **Cycle II:** Anomaly Detection (unsupervised pattern deviation)
-- **Cycle III:** Predictive Risk Modeling
-- **Cycle IV:** Multi-Signal Fusion Engine
-- **Cycle V:** Epidemiological Risk Detection
+Cycle I is designed with strict temporal integrity to ensure valid downstream modeling.
+
+Key safeguards:
+
+* All feature engineering is performed **per patient** using `groupby("patient_id")`
+* Data is **sorted by timestamp** before any transformation
+* Rolling statistics are computed using `.shift(1)` to ensure **only past data is used**
+* No forward-filling or future-aware imputation is applied
+* Feature windows strictly exclude the current prediction horizon
+
+These constraints ensure that all features represent information **available at prediction time**, making the system suitable for real-time deployment.
+
+## 📐 Feature Specification
+
+Example engineered features:
+
+* `heart_rate_lag1`, `heart_rate_lag2`
+* `spo2_delta`
+* `resp_rate_roll_mean_6`
+* `sbp_roll_std_6`
+* `temperature_roll_min_6`
+
+Feature categories:
+
+* **Lag Features** → capture recent history
+* **Delta Features** → capture rate of change
+* **Rolling Statistics** → capture trends and variability
+
+Total feature count: ~50 columns per `(patient_id, timestamp)` row.
+
+
+
+## ✅ Cycle I Validation
+
+The feature pipeline has been verified for:
+
+* Correct feature generation across all patients
+* Proper temporal ordering of observations
+* Absence of data leakage in rolling and lag features
+* Consistent feature dimensionality across the dataset
+
+The resulting dataset is fully prepared for supervised learning in Cycle II.
+
+## 📊 Cycle I Output Schema
+
+Each row in the processed dataset represents:
+
+* `patient_id`
+* `timestamp`
+* Raw vital signs
+* Engineered features (~50 columns)
+
+Example:
+
+| patient_id | timestamp | heart_rate | heart_rate_lag1 | spo2_delta | resp_rate_roll_mean_6 | ... |
+| ---------- | --------- | ---------- | --------------- | ---------- | --------------------- | --- |
+
+This structured dataset serves as the input for:
+
+* anomaly detection models
+* predictive risk scoring
+
 
 ## 🔐 Responsible Use
 
@@ -121,6 +179,13 @@ This project is intended for **research and educational purposes only**.
 See `POLICY.md` for full details.
 
 ---
+
+## 🔮 Roadmap
+
+- **Cycle II:** Anomaly Detection (unsupervised pattern deviation)
+- **Cycle III:** Predictive Risk Modeling
+- **Cycle IV:** Multi-Signal Fusion Engine
+- **Cycle V:** Epidemiological Risk Detection
 
 ## 🧪 How to Run
 
