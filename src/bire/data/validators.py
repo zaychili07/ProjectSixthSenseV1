@@ -2,6 +2,10 @@ import pandas as pd
 
 
 def drop_invalid_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Drop structurally invalid rows (missing key identifiers).
+    Does NOT handle signal validity — that belongs to validate_ranges.
+    """
     out = df.copy()
 
     required_cols = ["patient_id", "timestamp"]
@@ -9,16 +13,21 @@ def drop_invalid_rows(df: pd.DataFrame) -> pd.DataFrame:
     if missing_required:
         raise ValueError(f"Missing required columns: {missing_required}")
 
-    out = out.dropna(subset=["patient_id", "timestamp"])
+    out = out.dropna(subset=required_cols)
     return out
 
 
 def validate_ranges(df: pd.DataFrame, valid_ranges: dict) -> pd.DataFrame:
+    """
+    Replace out-of-range physiological values with NaN.
+    This preserves rows while marking bad measurements for imputation.
+    """
     out = df.copy()
 
     for col, (low, high) in valid_ranges.items():
         if col in out.columns:
-            out.loc[~out[col].isna() & ~out[col].between(low, high), col] = pd.NA
+            invalid_mask = ~out[col].isna() & ~out[col].between(low, high)
+            out.loc[invalid_mask, col] = pd.NA
 
     return out
 
@@ -27,6 +36,10 @@ def deduplicate_patient_timestamps(
     df: pd.DataFrame,
     signal_cols: list[str],
 ) -> pd.DataFrame:
+    """
+    Resolve duplicate (patient_id, timestamp) rows.
+    Signal columns are averaged; others take first value.
+    """
     out = df.copy()
 
     agg_dict = {}
