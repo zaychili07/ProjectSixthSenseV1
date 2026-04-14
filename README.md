@@ -267,6 +267,24 @@ Below is an example patient timeline showing raw vitals alongside the forward-lo
 
 ![Cycle II Target Timeline](assets/target_timeline_P003.png)
 
+## Approach
+- Time-series feature engineering:
+  - Lag features (t-1, t-2)
+  - Rolling statistics (mean, std)
+  - Delta features (rate of change)
+- Leakage-safe target construction using forward window
+- Patient-level train/val/test split
+
+## Model
+- Logistic Regression baseline
+- Class imbalance handled with `class_weight="balanced"`
+
+## Metrics
+- ROC-AUC
+- PR-AUC (primary due to imbalance)
+
+## Example Timeline
+![Target Timeline](assets/target_timeline_P003.png)
 ### 🔄 Current Status
 
 🔄 Model training in progress
