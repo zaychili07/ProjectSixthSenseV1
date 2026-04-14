@@ -261,6 +261,12 @@ This establishes the core **Inference Engine** of BIRE.
 
 ---
 
+## Cycle II Target Validation
+
+Below is an example patient timeline showing raw vitals alongside the forward-looking target.
+
+![Cycle II Target Timeline](assets/target_timeline_P003.png)
+
 ### 🔄 Current Status
 
 🔄 Model training in progress
