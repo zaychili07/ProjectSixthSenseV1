@@ -1,3 +1,16 @@
+"""
+BIRE Configuration Module
+
+Central location for all constants used across the pipeline.
+
+Why this exists:
+- Prevents hardcoding values throughout the codebase
+- Makes experiments reproducible and tunable
+- Keeps modeling assumptions explicit (e.g., window sizes, excluded columns)
+
+This is especially important in clinical pipelines where small changes
+can significantly affect downstream model behavior.
+"""
 RESAMPLE_FREQ = "5min"
 WINDOW_SIZE = 6
 
