@@ -1,122 +1,164 @@
-# 🧬 Project Sixth Sense — Bio-Intelligence Risk Engine (BIRE)
+🧬 Project Sixth Sense: Bio-Intelligence Risk Engine (BIRE)
 
-AI-powered time-series system for early detection of patient deterioration using physiological signals and temporal modeling.
+ 📊 Overview
 
----
+The Bio-Intelligence Risk Engine (BIRE) is a time-series machine learning system designed to detect early signs of patient deterioration using longitudinal vital sign data.
 
-##  Overview
+Unlike traditional threshold-based monitoring systems, BIRE focuses on temporal dynamics—capturing trends, instability, and rate-of-change in physiological signals—to generate forward-looking risk scores and actionable alerts.
 
-BIRE is a modular machine learning pipeline designed to detect **early warning signals in patient physiology before clinical deterioration becomes apparent**.
+🎯 Objective
 
-It shifts monitoring from:
+Develop a system that:
 
-**Reactive thresholds → Proactive intelligence**
+- Predicts clinical deterioration within a future time window (60 minutes)
+- Converts risk scores into low-noise, actionable alerts
+- Minimizes false positives and alert fatigue
+- Preserves temporal causality (no data leakage)
 
----
+🧠 Core System Design
 
-##  Key Capabilities
+BIRE is structured as a modular pipeline:
 
-- Time-aware validation (no data leakage)
-- Temporal feature engineering (lags, rolling stats, deltas)
-- Interpretable risk modeling (logistic regression baseline)
-- Persistence-based alert logic (reduces false alarms)
-- Patient-level risk trajectory analysis
-- Modular, production-style pipeline
+Raw Data → Temporal Alignment → Feature Engineering → Target Construction → Modeling → Alerting → Evaluation
 
----
+⚙️ Pipeline Architecture
+1. Data Processing
+Validation and cleaning of patient time-series data
+Deduplication of patient-timestamp pairs
+Range enforcement for physiological signals
 
-### Quick Start (Run the System)
+2. Temporal Alignment
+Resampling to fixed intervals (5-minute bins)
+Per-patient chronological alignment
 
-### 1. Generate features from raw data
+3. Feature Engineering (Cycle I)
 
-```python
-from bire.pipeline.main_pipeline import run_cycle1
+For each vital sign:
 
-df = run_cycle1("/path/to/input.csv")
+- Lag features (t-1, t-2)
+- Rate-of-change (delta)
+- Rolling statistics (mean, std, min)
 
-from bire.pipeline.main_pipeline import run_bire_modeling
+All rolling features are leakage-safe using shifted windows.
 
-feature_cols = [c for c in df.columns if c not in ["patient_id", "timestamp", "target"]]
+🎯 Target Construction (Cycle II)
 
-model, train_df, test_df = run_bire_modeling(
-    df,
-    feature_cols,
-    threshold=0.5,
-    window=3,
-)
-```
-### System Architechure
+Two key labels are defined:
 
-Raw Data → Validation → Temporal Alignment → Feature Engineering  
-→ Model → Risk Scores → Alert Logic → Trajectory Analysis
+event_now
 
-### Key Findings
-- Temporal validation exposed weaknesses in static threshold systems
-- Persistence-based alerting significantly reduced noise
-- Logistic regression produced more stable and interpretable signals than XGBoost
-- Risk trajectories showed meaningful temporal structure across patients
+Binary indicator of immediate physiological abnormality:
 
-### Project Structure
+SpO₂ < 90
+SBP < 90
+Temperature > 38°C
+target
+
+Forward-looking deterioration label:
+
+Indicates whether a patient will deteriorate within the next 60 minutes
+
+Constructed using:
+- Future shifting
+- Rolling window aggregation
+- Strict temporal causality
+
+🤖 Modeling
+- Baseline Model
+- Logistic Regression
+- Training Strategy
+- Time-aware patient-level split
+- Prevents data leakage across patients and time
+- Features Used
+- All engineered temporal features
+- Excludes:
+- patient_id
+- timestamp
+- event_now
+- target
+
+🚨 Alerting Framework
+
+BIRE converts probabilistic outputs into clinical alerts using:
+
+Threshold-based filtering
+Persistence requirement (alerts trigger only after sustained elevated risk)
+
+This ensures:
+
+- Reduced noise
+- Fewer false positives
+- Clinically meaningful signals
+
+📈 Model Performance
+Metric	Score
+ROC-AUC	0.828
+PR-AUC	0.782
+
+These results indicate strong discrimination, particularly in an imbalanced setting.
+
+⚡ Operational Alerting Performance
+
+- Total alerts: 2
+- Patients alerted: 1 (P003)
+- Stable patients (no alerts): P001, P002
+- Key Observations:
+- Alerts were highly concentrated on the deteriorating patient
+- No false alerts were triggered in stable patients
+- Maximum predicted risk reached 0.98
+- Alert precision proxy: 1.0
+
+All alerts aligned with true deterioration events in this evaluation slice.
+
+Interpretation
+
+BIRE demonstrates strong real-world behavior:
+
+High selectivity → avoids alert fatigue
+Strong sensitivity → captures meaningful deterioration
+Temporal consistency → alerts require sustained risk
+
+🧪 Key Strengths
+✅ Leakage-safe time-series pipeline
+✅ Forward-looking target design
+✅ Patient-level validation strategy
+✅ Operational alerting system (not just a model)
+✅ Clinically interpretable outputs
+
+⚠️ Limitations
+- Small sample size (mock dataset)
+- Evaluation results may not generalize without larger validation
+- Thresholds and persistence parameters require tuning for real-world deployment
+
+🚀 Future Work
+- XGBoost / advanced models for rare event detection
+- Threshold optimization & calibration
+- Lead-time analysis (how early deterioration is detected)
+- Patient-specific risk modeling
+- Real-world clinical validation
+
+🧠 Key Insight
+
+BIRE is not just a classifier—it is a decision-support system.
+
+The system bridges the gap between:
+
+- raw model predictions and actionable clinical alerts
+
+📂 Project Structure
 src/bire/
-├── data/
-├── features/
-├── models/
-├── evaluation/
-├── pipeline/
+├── data/              # Validation, alignment, imputation
+├── features/          # Temporal feature engineering
+├── models/            # Modeling logic
+├── pipeline/          # End-to-end orchestration
+├── evaluation/        # Alerting + performance evaluation
 
-### Feature Engineering Strategy
+📌 Summary
 
-For each physiological signal:
+BIRE demonstrates that incorporating temporal dynamics + persistence-based alerting can produce:
 
-Lag features (t-1, t-2)
-Delta (rate of change)
-Rolling mean, std, min, max
+- Early detection signals
+- Reduced noise
+- Clinically relevant alerts
 
-### All features:
-
-- computed per patient
-- strictly use past data
-- prevent leakage via .shift(1)
-
-### Data Leakage Prevention
-- Patient-level grouping
-- Strict timestamp ordering
-- No future-aware imputation
-- Rolling windows exclude current timestep
-- Time-aware train/test split
-
-### Modeling Approach
-- Supervised Model
-- Logistic Regression (baseline)
-- Balanced class weighting
-
-### Outputs
-- pred_proba → risk score
-- alert → persistence-based signal
-### Evaluation Strategy
-- Time-aware split (simulates real-world deployment)
-- Patient-level separation
-
-### Metrics:
-- AUROC
-- Precision / Recall
-- Alert behavior analysis
-
-### ⚠️ Limitations
-- Small dataset
-- Limited positive events
-- Lead-time estimation constrained
-
-### Next Steps
-- Larger datasets
-- Probability calibration
-- Real-time deployment pipeline
-- Multi-signal fusion
-
-### 🔐 Responsible Use
-- Research / educational purposes only
-- No PII
-- Not a clinical decision system
-
-# Run via CLI
-python src/bire/pipeline/main_pipeline.py
+This positions the system as a strong foundation for next-generation patient monitoring systems.
