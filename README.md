@@ -105,7 +105,8 @@ Constructed using:
 - Prevents data leakage across patients and time
 - Features Used
 - All engineered temporal features
-- Excludes:
+
+Excludes:
 - patient_id
 - timestamp
 - event_now
@@ -125,7 +126,8 @@ This ensures:
 - Clinically meaningful signals
 
 ## 📈 Model Performance
-Metric	Score
+Metric Score
+
 ROC-AUC	0.828
 PR-AUC	0.782
 
