@@ -52,7 +52,7 @@ def run_bire_modeling(df, feature_cols, threshold=0.5, window=3):
     """
     missing = [c for c in feature_cols if c not in df.columns]
     if missing:
-    raise ValueError(f"Missing features: {missing}")
+        raise ValueError(f"Missing features: {missing}")
 
     train_df, test_df = time_aware_patient_split(df)
 
