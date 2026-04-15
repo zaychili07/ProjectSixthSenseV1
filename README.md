@@ -31,6 +31,13 @@ BIRE instead analyzes **temporal patterns—trends, instability, and rate-of-cha
 BIRE captures this by transforming raw vital signs into **temporal signals of instability**, enabling earlier and more reliable detection.
 
 ---
+## 📊 System Snapshot
+
+- ROC-AUC: **0.83**
+- PR-AUC: **0.78**
+- Alert Precision Proxy: **1.00**
+- Alerts Triggered: **2 (targeted, low-noise)**
+
 ## 🎯 Objective
 
 Develop a system that:
