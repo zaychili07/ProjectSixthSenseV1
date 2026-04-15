@@ -25,7 +25,7 @@ BIRE instead analyzes **temporal patterns—trends, instability, and rate-of-cha
 
 ## 🧠 Key Insight
 
-> Early deterioration is not defined by a single abnormal reading —  
+> Early deterioration is not defined by a single abnormal reading  
 > it is defined by **how physiology changes over time**.
 
 BIRE captures this by transforming raw vital signs into **temporal signals of instability**, enabling earlier and more reliable detection.
