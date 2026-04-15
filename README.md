@@ -1,6 +1,6 @@
 # 🧬 Project Sixth Sense — Bio-Intelligence Risk Engine (BIRE)
 
-***Because physiology changes before it fails.***
+***"Because physiology changes before it fails."***
 
 A time-series machine learning system for early detection of patient deterioration  
 using physiological dynamics, not static thresholds.
