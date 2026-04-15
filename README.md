@@ -1,4 +1,4 @@
-# 🧬 Project Sixth Sence — Bio-Intelligence Risk Engine (BIRE)
+# 🧬 Project Sixth Sense — Bio-Intelligence Risk Engine (BIRE)
 
 **A time-series machine learning system for early detection of patient deterioration using physiological dynamics, not static thresholds.**
 
