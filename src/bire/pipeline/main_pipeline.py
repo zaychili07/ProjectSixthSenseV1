@@ -12,7 +12,9 @@ from bire.features.feature_engineering import (
     add_features_all_patients,
     get_feature_columns,
 )
-
+from bire.data.validators import time_aware_patient_split
+from bire.models.logistic import build_logistic_model
+from bire.evaluation.alerts import apply_alert_logic
 
 def run_cycle1(input_path: str, output_path: str = None):
     print("Loading data...")
@@ -43,6 +45,29 @@ def run_cycle1(input_path: str, output_path: str = None):
     print("Cycle I complete ✅")
     return df
 
+missing = [c for c in feature_cols if c not in df.columns]
+if missing:
+    raise ValueError(f"Missing features: {missing}")
+
+def run_bire_modeling(df, feature_cols, threshold=0.5, window=3):
+    """
+    Train and evaluate the final BIRE logistic model on a time-aware split.
+    """
+    train_df, test_df = time_aware_patient_split(df)
+
+    X_train = train_df[feature_cols]
+    y_train = train_df["target"]
+
+    X_test = test_df[feature_cols]
+
+    model = build_logistic_model()
+    model.fit(X_train, y_train)
+
+    test_df = test_df.copy()
+    test_df["pred_proba"] = model.predict_proba(X_test)[:, 1]
+    test_df = apply_alert_logic(test_df, threshold=threshold, window=window)
+
+    return model, train_df, test_df
 
 if __name__ == "__main__":
     import os
