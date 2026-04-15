@@ -67,7 +67,7 @@ if missing:
     test_df = test_df.copy()
     test_df["pred_proba"] = model.predict_proba(X_test)[:, 1]
     test_df = apply_alert_logic(test_df, threshold=threshold, window=window)
-
+    
     return model, train_df, test_df
 
 if __name__ == "__main__":
