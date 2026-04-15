@@ -162,3 +162,84 @@ BIRE demonstrates that incorporating temporal dynamics + persistence-based alert
 - Clinically relevant alerts
 
 This positions the system as a strong foundation for next-generation patient monitoring systems.
+
+🚀 Getting Started
+1. Clone the Repository
+git clone https://github.com/zaychili07/ProjectSixthSenseV1.git
+cd ProjectSixthSenseV1
+2. Set Up Environment
+
+Create a virtual environment (recommended):
+
+python -m venv venv
+source venv/bin/activate  # Mac/Linux
+venv\Scripts\activate     # Windows
+
+Install dependencies:
+
+pip install -r requirements.txt
+
+If no requirements.txt is present, install:
+
+pip install pandas numpy scikit-learn matplotlib
+3. Prepare Input Data
+
+Ensure your dataset follows this structure:
+
+column	description
+patient_id	unique patient identifier
+timestamp	datetime
+heart_rate	heart rate
+resp_rate	respiratory rate
+spo2	oxygen saturation
+temperature	body temperature
+sbp	systolic blood pressure
+dbp	diastolic blood pressure
+
+Example file:
+
+data/raw/bire_mock_vitals.csv
+4. Run the Pipeline
+
+You can run the full feature engineering pipeline:
+
+python src/bire/pipeline/main_pipeline.py
+
+Or specify paths:
+
+export BIRE_INPUT_PATH="data/raw/bire_mock_vitals.csv"
+export BIRE_OUTPUT_PATH="data/processed/bire_cycle1_features.csv"
+
+python src/bire/pipeline/main_pipeline.py
+5. Run Modeling (Notebook Recommended)
+
+Open the notebook and run:
+
+from bire.pipeline.main_pipeline import run_cycle1, run_bire_modeling
+
+df = run_cycle1("data/raw/bire_mock_vitals.csv")
+
+feature_cols = [c for c in df.columns if c not in ["patient_id", "timestamp", "event_now", "target"]]
+
+model, train_df, test_df = run_bire_modeling(df, feature_cols)
+6. Generate Alerts
+test_df["alert"].sum()
+
+Or run full evaluation section in the notebook.
+
+📓 Notebook Workflow
+
+The recommended workflow is:
+
+Run full pipeline (Cycle I)
+Construct target (Cycle II)
+Train model
+Evaluate performance
+Analyze alerting behavior
+🛠️ Notes
+Ensure working directory is project root
+
+Kaggle users may need to adjust paths:
+
+"/kaggle/working/ProjectSixthSenseV1/..."
+Use sys.path.append("src") if import issues occur
