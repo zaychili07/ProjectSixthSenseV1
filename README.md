@@ -117,3 +117,6 @@ Rolling mean, std, min, max
 - Research / educational purposes only
 - No PII
 - Not a clinical decision system
+
+# Run via CLI
+python src/bire/pipeline/main_pipeline.py
