@@ -128,7 +128,7 @@ This ensures:
 ## 📈 Model Performance
 Metric Score
 
-ROC-AUC	0.828
+ROC-AUC	0.828 /
 PR-AUC	0.782
 
 These results indicate strong discrimination, particularly in an imbalanced setting.
