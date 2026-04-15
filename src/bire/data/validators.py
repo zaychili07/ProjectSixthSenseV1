@@ -53,3 +53,72 @@ def deduplicate_patient_timestamps(df: pd.DataFrame, signal_cols: list[str]) -> 
     )
 
     return out
+
+# =========================
+# TEMPORAL VALIDATION (CHAPTER 13)
+# =========================
+
+def time_aware_patient_split(
+    df: pd.DataFrame,
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    train_frac: float = 0.7,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Split each patient's timeline into earlier (train) and later (test) segments.
+
+    This ensures we train on past data and evaluate on future data,
+    mimicking real-world deployment.
+    """
+    if patient_col not in df.columns:
+        raise ValueError(f"Missing column: {patient_col}")
+    if time_col not in df.columns:
+        raise ValueError(f"Missing column: {time_col}")
+
+    if not 0.0 < train_frac < 1.0:
+        raise ValueError("train_frac must be between 0 and 1.")
+
+    out = df.copy()
+    out[time_col] = pd.to_datetime(out[time_col])
+    out = out.sort_values([patient_col, time_col])
+
+    train_parts = []
+    test_parts = []
+
+    for patient_id, patient_df in out.groupby(patient_col):
+        patient_df = patient_df.sort_values(time_col)
+        n = len(patient_df)
+
+        if n < 2:
+            train_parts.append(patient_df)
+            continue
+
+        split_idx = max(1, int(n * train_frac))
+        split_idx = min(split_idx, n - 1)
+
+        train_parts.append(patient_df.iloc[:split_idx])
+        test_parts.append(patient_df.iloc[split_idx:])
+
+    train_df = pd.concat(train_parts, ignore_index=True)
+    test_df = pd.concat(test_parts, ignore_index=True) if test_parts else pd.DataFrame()
+
+    return train_df, test_df
+
+
+def summarize_split(
+    train_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    target_col: str = "target",
+    patient_col: str = "patient_id",
+) -> dict:
+    """
+    Provide a quick summary of the temporal split.
+    """
+    return {
+        "train_rows": len(train_df),
+        "test_rows": len(test_df),
+        "train_patients": train_df[patient_col].nunique() if patient_col in train_df else 0,
+        "test_patients": test_df[patient_col].nunique() if patient_col in test_df else 0,
+        "train_positive_rows": int(train_df[target_col].sum()) if target_col in train_df else 0,
+        "test_positive_rows": int(test_df[target_col].sum()) if target_col in test_df else 0,
+    }
