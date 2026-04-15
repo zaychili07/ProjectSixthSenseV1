@@ -1,11 +1,36 @@
-# 🧬 Project Sixth Sense: Bio-Intelligence Risk Engine (BIRE)
+# 🧬 BIRE — Bio-Intelligence Risk Engine
 
- # 📊 Overview
+**A time-series machine learning system for early detection of patient deterioration using physiological dynamics, not static thresholds.**
 
-The Bio-Intelligence Risk Engine (BIRE) is a time-series machine learning system designed to detect early signs of patient deterioration using longitudinal vital sign data.
+---
 
-Unlike traditional threshold-based monitoring systems, BIRE focuses on temporal dynamics—capturing trends, instability, and rate-of-change in physiological signals—to generate forward-looking risk scores and actionable alerts.
+## 🚀 Overview
 
+BIRE is a modular clinical ML system designed to identify **early warning signals of patient decline before they become clinically obvious**.
+
+Traditional monitoring systems rely on fixed thresholds (e.g., SpO₂ < 90), often reacting **after deterioration has already occurred**.  
+BIRE instead analyzes **temporal patterns—trends, instability, and rate-of-change**—to generate **forward-looking risk scores and low-noise alerts**.
+
+---
+
+## 🎯 What Makes BIRE Different
+
+- 🔄 **Temporal Awareness** — detects change over time, not just abnormal values  
+- ⚠️ **Forward Prediction** — predicts deterioration within a future window (60 minutes)  
+- 🚨 **Persistence-Based Alerting** — reduces false alarms by requiring sustained risk  
+- 🧠 **Interpretable Modeling** — logistic regression baseline with explainable outputs  
+- 🏥 **Clinical Framing** — designed as a decision-support system, not just a model  
+
+---
+
+## 🧠 Key Insight
+
+> Early deterioration is not defined by a single abnormal reading —  
+> it is defined by **how physiology changes over time**.
+
+BIRE captures this by transforming raw vital signs into **temporal signals of instability**, enabling earlier and more reliable detection.
+
+---
 # 🎯 Objective
 
 Develop a system that:
