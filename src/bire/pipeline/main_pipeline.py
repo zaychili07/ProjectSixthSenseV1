@@ -51,7 +51,6 @@ def run_bire_modeling(df, feature_cols, threshold=0.5, window=3):
     Train and evaluate the final BIRE logistic model on a time-aware split.
     """
     missing = [c for c in feature_cols if c not in df.columns]
-    
     if missing:
     raise ValueError(f"Missing features: {missing}")
 
