@@ -138,7 +138,8 @@ These results indicate strong discrimination, particularly in an imbalanced sett
 - Total alerts: 2
 - Patients alerted: 1 (P003)
 - Stable patients (no alerts): P001, P002
-- Key Observations:
+
+ Key Observations:
 - Alerts were highly concentrated on the deteriorating patient
 - No false alerts were triggered in stable patients
 - Maximum predicted risk reached 0.98
@@ -187,9 +188,13 @@ The system bridges the gap between:
 ## 📂 Project Structure
 src/bire/
 ├── data/              # Validation, alignment, imputation
+
 ├── features/          # Temporal feature engineering
+
 ├── models/            # Modeling logic
+
 ├── pipeline/          # End-to-end orchestration
+
 ├── evaluation/        # Alerting + performance evaluation
 
 ## 📌 Summary
