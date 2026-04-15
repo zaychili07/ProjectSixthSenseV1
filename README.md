@@ -1,4 +1,4 @@
-🧬 Project Sixth Sense: Bio-Intelligence Risk Engine (BIRE)
+# 🧬 Project Sixth Sense: Bio-Intelligence Risk Engine (BIRE)
 
  📊 Overview
 
