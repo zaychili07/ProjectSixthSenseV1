@@ -1,12 +1,12 @@
 # 🧬 Project Sixth Sense: Bio-Intelligence Risk Engine (BIRE)
 
- 📊 Overview
+ # 📊 Overview
 
 The Bio-Intelligence Risk Engine (BIRE) is a time-series machine learning system designed to detect early signs of patient deterioration using longitudinal vital sign data.
 
 Unlike traditional threshold-based monitoring systems, BIRE focuses on temporal dynamics—capturing trends, instability, and rate-of-change in physiological signals—to generate forward-looking risk scores and actionable alerts.
 
-🎯 Objective
+# 🎯 Objective
 
 Develop a system that:
 
@@ -15,13 +15,13 @@ Develop a system that:
 - Minimizes false positives and alert fatigue
 - Preserves temporal causality (no data leakage)
 
-🧠 Core System Design
+# 🧠 Core System Design
 
 BIRE is structured as a modular pipeline:
 
 Raw Data → Temporal Alignment → Feature Engineering → Target Construction → Modeling → Alerting → Evaluation
 
-⚙️ Pipeline Architecture
+# ⚙️ Pipeline Architecture
 1. Data Processing
 Validation and cleaning of patient time-series data
 Deduplication of patient-timestamp pairs
@@ -41,7 +41,7 @@ For each vital sign:
 
 All rolling features are leakage-safe using shifted windows.
 
-🎯 Target Construction (Cycle II)
+# 🎯 Target Construction (Cycle II)
 
 Two key labels are defined:
 
@@ -63,7 +63,7 @@ Constructed using:
 - Rolling window aggregation
 - Strict temporal causality
 
-🤖 Modeling
+# 🤖 Modeling
 - Baseline Model
 - Logistic Regression
 - Training Strategy
@@ -77,7 +77,7 @@ Constructed using:
 - event_now
 - target
 
-🚨 Alerting Framework
+# 🚨 Alerting Framework
 
 BIRE converts probabilistic outputs into clinical alerts using:
 
@@ -90,14 +90,14 @@ This ensures:
 - Fewer false positives
 - Clinically meaningful signals
 
-📈 Model Performance
+# 📈 Model Performance
 Metric	Score
 ROC-AUC	0.828
 PR-AUC	0.782
 
 These results indicate strong discrimination, particularly in an imbalanced setting.
 
-⚡ Operational Alerting Performance
+# ⚡ Operational Alerting Performance
 
 - Total alerts: 2
 - Patients alerted: 1 (P003)
@@ -118,26 +118,26 @@ High selectivity → avoids alert fatigue
 Strong sensitivity → captures meaningful deterioration
 Temporal consistency → alerts require sustained risk
 
-🧪 Key Strengths
+# 🧪 Key Strengths
 ✅ Leakage-safe time-series pipeline
 ✅ Forward-looking target design
 ✅ Patient-level validation strategy
 ✅ Operational alerting system (not just a model)
 ✅ Clinically interpretable outputs
 
-⚠️ Limitations
+# ⚠️ Limitations
 - Small sample size (mock dataset)
 - Evaluation results may not generalize without larger validation
 - Thresholds and persistence parameters require tuning for real-world deployment
 
-🚀 Future Work
+# 🚀 Future Work
 - XGBoost / advanced models for rare event detection
 - Threshold optimization & calibration
 - Lead-time analysis (how early deterioration is detected)
 - Patient-specific risk modeling
 - Real-world clinical validation
 
-🧠 Key Insight
+# 🧠 Key Insight
 
 BIRE is not just a classifier—it is a decision-support system.
 
@@ -145,7 +145,7 @@ The system bridges the gap between:
 
 - raw model predictions and actionable clinical alerts
 
-📂 Project Structure
+# 📂 Project Structure
 src/bire/
 ├── data/              # Validation, alignment, imputation
 ├── features/          # Temporal feature engineering
@@ -153,7 +153,7 @@ src/bire/
 ├── pipeline/          # End-to-end orchestration
 ├── evaluation/        # Alerting + performance evaluation
 
-📌 Summary
+# 📌 Summary
 
 BIRE demonstrates that incorporating temporal dynamics + persistence-based alerting can produce:
 
