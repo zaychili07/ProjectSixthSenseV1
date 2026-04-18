@@ -220,7 +220,13 @@ def build_bire_dashboard_markdown(bire_output):
 """
     return dashboard_md
 
-best_demo_patient = trajectory_summary_df.sort_values(
-    ["n_alerts", "max_risk", "n_rows"],
-    ascending=[False, False, False]
-).iloc[0]["patient_id"]
+def select_best_demo_patient(trajectory_summary_df):
+    if trajectory_summary_df.empty:
+        raise ValueError("trajectory_summary_df is empty")
+
+    best_row = trajectory_summary_df.sort_values(
+        ["n_alerts", "max_risk", "n_rows"],
+        ascending=[False, False, False]
+    ).iloc[0]
+
+    return best_row["patient_id"]
