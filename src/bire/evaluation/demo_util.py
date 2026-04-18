@@ -12,6 +12,10 @@ def build_bire_output_from_patient(
     if patient_df.empty:
         raise ValueError("patient_df is empty")
 
+    missing = [c for c in feature_cols if c not in patient_df.columns]
+    if missing:
+        raise ValueError(f"Missing feature columns for BIRE output: {missing}")
+
     patient_df = patient_df.sort_values("timestamp").copy()
     latest_row = patient_df.iloc[-1]
 
