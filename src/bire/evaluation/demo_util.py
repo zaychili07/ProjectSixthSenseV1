@@ -146,3 +146,22 @@ patient_example_df = patient_example_df.sort_values("timestamp")
 patient_traj = trajectory_summary_df[
     trajectory_summary_df["patient_id"] == best_demo_patient
 ]
+
+patient_rankings = []
+
+for pid in trajectory_summary_df["patient_id"].unique():
+    this_patient = df[df["patient_id"] == pid].copy().sort_values("timestamp")
+    det_summary = summarize_deterioration_strength(this_patient)
+
+    row = trajectory_summary_df[trajectory_summary_df["patient_id"] == pid].iloc[0].to_dict()
+    row.update(det_summary)
+    patient_rankings.append(row)
+
+patient_rankings_df = pd.DataFrame(patient_rankings)
+
+patient_rankings_df = patient_rankings_df.sort_values(
+    ["n_alerts", "max_risk", "deterioration_score", "n_rows"],
+    ascending=[False, False, False, False]
+)
+
+display(patient_rankings_df.head(10))
