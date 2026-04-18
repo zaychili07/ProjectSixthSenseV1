@@ -122,3 +122,9 @@ def summarize_split(
         "train_positive_rows": int(train_df[target_col].sum()) if target_col in train_df else 0,
         "test_positive_rows": int(test_df[target_col].sum()) if target_col in test_df else 0,
     }
+
+def validate_target_columns(df):
+    if "target" not in df.columns:
+        raise ValueError("Missing 'target' column")
+    if "event_now" not in df.columns:
+        raise ValueError("Missing 'event_now' column")
