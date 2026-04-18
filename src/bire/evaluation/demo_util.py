@@ -165,3 +165,57 @@ patient_rankings_df = patient_rankings_df.sort_values(
 )
 
 display(patient_rankings_df.head(10))
+
+def build_bire_dashboard_markdown(bire_output):
+    risk_score = bire_output["risk_score"]
+    risk_band_raw = bire_output["risk_band"]
+    risk_band = str(risk_band_raw).upper()
+    patient_id = bire_output["patient_id"]
+    alert_status = "YES" if bire_output["alert"] else "NO"
+    horizon = bire_output["prediction_horizon_minutes"]
+    data_quality = bire_output["data_quality"]
+
+    risk_color_map = {
+        "LOW": "#16a34a",
+        "MODERATE": "#f59e0b",
+        "HIGH": "#dc2626",
+    }
+    risk_color = risk_color_map.get(risk_band, "#6b7280")
+    alert_color = "#dc2626" if bire_output["alert"] else "#16a34a"
+
+    dashboard_md = f"""
+# 🏥 BIRE Clinical Risk Dashboard
+
+<div style="padding:14px 16px; border:1px solid #333; border-radius:12px; margin:10px 0 14px 0;">
+  <div style="font-size:16px; margin-bottom:10px;"><b>Patient Overview</b></div>
+  <div><b>Patient ID:</b> <code>{patient_id}</code></div>
+  <div><b>Risk Score:</b> <code>{risk_score:.3f}</code></div>
+  <div>
+    <b>Risk Band:</b>
+    <span style="
+      display:inline-block;
+      padding:4px 10px;
+      border-radius:999px;
+      color:white;
+      background:{risk_color};
+      font-weight:700;
+      margin-left:6px;
+    ">{risk_band}</span>
+  </div>
+  <div>
+    <b>Alert Triggered:</b>
+    <span style="
+      display:inline-block;
+      padding:4px 10px;
+      border-radius:999px;
+      color:white;
+      background:{alert_color};
+      font-weight:700;
+      margin-left:6px;
+    ">{alert_status}</span>
+  </div>
+  <div><b>Prediction Horizon:</b> <b>{horizon} minutes</b></div>
+  <div><b>Data Quality:</b> <b>{data_quality}</b></div>
+</div>
+"""
+    return dashboard_md
