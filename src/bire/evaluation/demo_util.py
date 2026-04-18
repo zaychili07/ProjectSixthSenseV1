@@ -219,3 +219,8 @@ def build_bire_dashboard_markdown(bire_output):
 </div>
 """
     return dashboard_md
+
+best_demo_patient = trajectory_summary_df.sort_values(
+    ["n_alerts", "max_risk", "n_rows"],
+    ascending=[False, False, False]
+).iloc[0]["patient_id"]
