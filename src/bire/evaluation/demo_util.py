@@ -3,43 +3,51 @@
 # ----------------------------
 import pandas as pd
 
+
 def build_bire_output_from_patient(
     patient_df,
     feature_cols,
-    bire_model
+    bire_model,
 ):
+    if patient_df.empty:
+        raise ValueError("patient_df is empty")
+
     patient_df = patient_df.sort_values("timestamp").copy()
     latest_row = patient_df.iloc[-1]
 
     X_latest = latest_row[feature_cols].to_frame().T
     risk_score = float(bire_model.predict_proba(X_latest)[0, 1])
 
-   if risk_score >= 0.5:
-    risk_band = "high"
-    alert = True
-elif risk_score >= 0.25:
-    risk_band = "moderate"
-    alert = False
-else:
-    risk_band = "low"
-    alert = False
+    if risk_score >= 0.5:
+        risk_band = "high"
+        alert = True
+    elif risk_score >= 0.25:
+        risk_band = "moderate"
+        alert = False
+    else:
+        risk_band = "low"
+        alert = False
 
     top_drivers = []
     for col in feature_cols:
-        if "delta" in col and col in latest_row:
+        if "delta" in col and col in patient_df.columns:
             val = latest_row[col]
             if pd.notna(val) and abs(val) > 0:
                 top_drivers.append({
                     "feature": col,
                     "direction": "worsening",
-                    "value": float(val)
+                    "value": float(val),
                 })
 
-    top_drivers = sorted(top_drivers, key=lambda x: abs(x["value"]), reverse=True)[:3]
+    top_drivers = sorted(
+        top_drivers,
+        key=lambda x: abs(x["value"]),
+        reverse=True,
+    )[:3]
 
     trend_summary = {
         k: "changing"
-        for k in ["spo2", "resp_rate", "sbp", "temperature"]
+        for k in ["spo2", "resp_rate", "sbp", "heart_rate", "temperature"]
         if k in patient_df.columns
     }
 
@@ -51,7 +59,7 @@ else:
         "prediction_horizon_minutes": 60,
         "top_drivers": top_drivers,
         "trend_summary": trend_summary,
-        "data_quality": "adequate"
+        "data_quality": "adequate",
     }
 
 def summarize_deterioration_strength(patient_df):
