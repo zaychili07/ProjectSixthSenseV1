@@ -130,4 +130,45 @@ def summarize_deterioration_strength(patient_df):
 
     return summary
 
+def build_bire_dashboard_markdown(bire_output: dict) -> str:
+    return f"""
+# BIRE Clinical Risk Dashboard
 
+**Patient ID:** {bire_output['patient_id']}  
+**Timestamp:** {bire_output['timestamp']}  
+
+**Risk Score:** {bire_output['risk_score']:.3f}  
+**Risk Band:** {bire_output['risk_band']}  
+**Alert:** {bire_output['alert']}  
+**Prediction Horizon:** {bire_output['prediction_horizon_minutes']} minutes  
+**Data Quality:** {bire_output['data_quality']}
+""".strip()
+
+
+def build_top_drivers_table(bire_output: dict) -> pd.DataFrame:
+    top_drivers = bire_output.get("top_drivers", [])
+    if not top_drivers:
+        return pd.DataFrame(columns=["feature", "direction", "value"])
+    return pd.DataFrame(top_drivers)
+
+
+def build_trend_summary_table(bire_output: dict) -> pd.DataFrame:
+    trend_summary = bire_output.get("trend_summary", {})
+    if not trend_summary:
+        return pd.DataFrame(columns=["vital", "trend"])
+
+    return pd.DataFrame(
+        [{"vital": vital, "trend": trend} for vital, trend in trend_summary.items()]
+    )
+
+
+def select_best_demo_patient(
+    scored_df: pd.DataFrame,
+    patient_id_col: str = "patient_id",
+    score_col: str = "pred_proba",
+) -> str:
+    if score_col not in scored_df.columns:
+        raise ValueError(f"Expected '{score_col}' column in scored_df.")
+
+    best_row = scored_df.sort_values(score_col, ascending=False).iloc[0]
+    return str(best_row[patient_id_col])
