@@ -1,3 +1,5 @@
+import pandas as pd
+
 
 def compute_lead_time_summary(
     df: pd.DataFrame,
@@ -9,6 +11,7 @@ def compute_lead_time_summary(
     """
     Compute first alert time, first event time, and lead time per patient.
     """
+
     working_df = df.copy()
     working_df[time_col] = pd.to_datetime(working_df[time_col])
     working_df = working_df.sort_values([patient_col, time_col])
@@ -34,6 +37,7 @@ def compute_lead_time_summary(
             "first_alert_time": first_alert_time,
             "first_event_time": first_event_time,
             "lead_time_minutes": lead_time_minutes,
+            "has_event": not event_rows.empty,
         })
 
     return pd.DataFrame(rows)
