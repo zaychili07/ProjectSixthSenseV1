@@ -227,7 +227,7 @@ plt.xticks(rotation=30)
 plt.tight_layout()
 plt.show()
 
-def plot_vital_trajectories(
+def plot_vital_trajectories(   # multi signal overview
     patient_df,
     patient_id=None,
     time_col="timestamp",
@@ -307,7 +307,7 @@ def plot_top_feature_coefficients(
     plt.tight_layout()
     plt.show()
 
-def plot_single_vital_with_threshold(
+def plot_single_vital_with_threshold(     # focused clinical view
     patient_df,
     signal,
     threshold=None,
