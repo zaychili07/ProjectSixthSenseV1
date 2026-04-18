@@ -162,3 +162,67 @@ def plot_demo_trajectory(df, patient_id, threshold=0.5):
     ax.legend(frameon=True, fancybox=True)
     plt.tight_layout()
     plt.show()
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Sort so story reads left → right
+df_plot = demo_summary_df.sort_values("alerts", ascending=False)
+
+# Color mapping (more alerts = more intense)
+colors = ["#d62728" if x > 0 else "#2ca02c" for x in df_plot["alerts"]]
+
+plt.figure(figsize=(9, 5))
+
+bars = plt.bar(
+    df_plot["patient_id"],
+    df_plot["alerts"],
+    color=colors,
+    edgecolor="black",
+    linewidth=1.2
+)
+
+plt.axhline(
+    y=1,
+    linestyle="--",
+    linewidth=2.5,      # thicker
+    alpha=0.9,          # more visible
+    zorder=3            # draw above bars
+)
+
+plt.axhspan(1, plt.ylim()[1], alpha=0.2)
+
+plt.text(
+    len(df_plot) - 0.5,
+    1.15,
+    "⚠️ Alert Threshold",
+    fontsize=11,
+    fontweight="bold",
+    ha="right",
+    va="bottom"
+)
+
+# Add value labels on top
+for bar in bars:
+    height = bar.get_height()
+    plt.text(
+        bar.get_x() + bar.get_width()/2,
+        height + 0.05,
+        f"{int(height)}",
+        ha="center",
+        va="bottom",
+        fontsize=10,
+        fontweight="bold"
+    )
+
+# Styling
+plt.title(" BIRE Alerts by Patient", fontsize=14, fontweight="bold")
+plt.xlabel("Patient ID", fontsize=11)
+plt.ylabel("Alert Count", fontsize=11)
+
+plt.grid(axis="y", linestyle="--", alpha=0.4)
+plt.ylim(0, max(df_plot["alerts"]) + 1)
+
+plt.xticks(rotation=30)
+plt.tight_layout()
+plt.show()
