@@ -254,6 +254,8 @@ def plot_vital_trajectories(
             marker="o"
         )
 
+        plt.grid(True, alpha=0.3) # small enhacement
+
         title_id = patient_id if patient_id is not None else "Unknown"
         plt.title(f"{col.upper()} Trajectory – Patient {title_id}")
 
