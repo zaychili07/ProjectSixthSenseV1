@@ -226,3 +226,40 @@ plt.ylim(0, max(df_plot["alerts"]) + 1)
 plt.xticks(rotation=30)
 plt.tight_layout()
 plt.show()
+
+def plot_vital_trajectories(
+    patient_df,
+    patient_id=None,
+    time_col="timestamp",
+    vital_cols=None,
+):
+    import matplotlib.pyplot as plt
+
+    if vital_cols is None:
+        vital_cols = ["spo2", "resp_rate", "sbp", "heart_rate", "temperature"]
+
+    # Keep only columns that exist
+    plot_cols = [c for c in vital_cols if c in patient_df.columns]
+
+    if len(plot_cols) == 0:
+        print("No valid vital columns found.")
+        return
+
+    for col in plot_cols:
+        plt.figure(figsize=(10, 4))
+
+        plt.plot(
+            patient_df[time_col],
+            patient_df[col],
+            marker="o"
+        )
+
+        title_id = patient_id if patient_id is not None else "Unknown"
+        plt.title(f"{col.upper()} Trajectory – Patient {title_id}")
+
+        plt.xlabel("Timestamp")
+        plt.ylabel(col)
+        plt.xticks(rotation=45)
+
+        plt.tight_layout()
+        plt.show()
