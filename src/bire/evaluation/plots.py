@@ -265,3 +265,36 @@ def plot_vital_trajectories(
 
         plt.tight_layout()
         plt.show()
+
+def plot_top_feature_coefficients(
+    coef_df,
+    top_n=10,
+    feature_col="feature",
+    coef_col="coefficient",
+):
+    import matplotlib.pyplot as plt
+
+    if coef_df.empty:
+        print("Coefficient DataFrame is empty.")
+        return
+
+    top_features = (
+        coef_df.head(top_n)
+        .sort_values(coef_col)
+    )
+
+    plt.figure(figsize=(8, 5))
+
+    plt.barh(
+        top_features[feature_col],
+        top_features[coef_col]
+    )
+
+    plt.axvline(0)
+    plt.grid(axis="x", linestyle="--", alpha=0.3) ### added line #
+    plt.title("Top Feature Effects on Risk (Logistic Regression)")
+    plt.xlabel("Coefficient")
+    plt.ylabel("Feature")
+
+    plt.tight_layout()
+    plt.show()
