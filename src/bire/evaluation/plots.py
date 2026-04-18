@@ -235,10 +235,18 @@ def plot_vital_trajectories(
 ):
     import matplotlib.pyplot as plt
 
+    if patient_df.empty:
+        print("patient_df is empty.")
+        return
+
+    if time_col not in patient_df.columns:
+        raise ValueError(f"Missing time column: {time_col}")
+
+    patient_df = patient_df.sort_values(time_col).copy()
+
     if vital_cols is None:
         vital_cols = ["spo2", "resp_rate", "sbp", "heart_rate", "temperature"]
 
-    # Keep only columns that exist
     plot_cols = [c for c in vital_cols if c in patient_df.columns]
 
     if len(plot_cols) == 0:
@@ -254,13 +262,13 @@ def plot_vital_trajectories(
             marker="o"
         )
 
-        plt.grid(True, alpha=0.3) # small enhacement
+        plt.grid(True, alpha=0.3)
 
         title_id = patient_id if patient_id is not None else "Unknown"
         plt.title(f"{col.upper()} Trajectory – Patient {title_id}")
 
         plt.xlabel("Timestamp")
-        plt.ylabel(col)
+        plt.ylabel(col.replace("_", " ").title())
         plt.xticks(rotation=45)
 
         plt.tight_layout()
@@ -296,5 +304,49 @@ def plot_top_feature_coefficients(
     plt.xlabel("Coefficient")
     plt.ylabel("Feature")
 
+    plt.tight_layout()
+    plt.show()
+
+def plot_single_vital_with_threshold(
+    patient_df,
+    signal,
+    threshold=None,
+    patient_id=None,
+    time_col="timestamp",
+):
+    import matplotlib.pyplot as plt
+
+    if patient_df.empty:
+        print("patient_df is empty.")
+        return
+
+    if signal not in patient_df.columns:
+        raise ValueError(f"Signal '{signal}' not found in DataFrame")
+
+    if time_col not in patient_df.columns:
+        raise ValueError(f"Missing time column: {time_col}")
+
+    patient_df = patient_df.sort_values(time_col).copy()
+
+    plt.figure(figsize=(10, 4))
+
+    plt.plot(
+        patient_df[time_col],
+        patient_df[signal],
+        label=signal.replace("_", " ").title()
+    )
+
+    # Optional threshold line
+    if threshold is not None:
+        plt.axhline(threshold, linestyle="--", alpha=0.8, label="Threshold")
+
+    title_id = patient_id if patient_id is not None else "Unknown"
+    plt.title(f"{signal.upper()} Over Time – Patient {title_id}")
+
+    plt.xlabel("Time")
+    plt.ylabel(signal.replace("_", " ").title())
+    plt.legend()
+
+    plt.xticks(rotation=45)
     plt.tight_layout()
     plt.show()
