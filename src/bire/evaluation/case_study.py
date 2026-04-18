@@ -10,7 +10,7 @@ def build_bire_output_from_patient(
 ):
     """
     Build a structured BIRE output dictionary from one patient's latest row.
-    
+
     Assumes:
     - patient_df contains one patient's time-ordered feature rows
     - feature_cols are the columns used by the trained model
@@ -23,15 +23,16 @@ def build_bire_output_from_patient(
     X_latest = latest_row[feature_cols].to_frame().T
     risk_score = float(bire_model.predict_proba(X_latest)[0, 1])
 
- if risk_score >= alert_threshold:
-    risk_band = "high"
-    alert = True
-elif risk_score >= 0.25:
-    risk_band = "moderate"
-    alert = False
-else:
-    risk_band = "low"
-    alert = False
+    if risk_score >= alert_threshold:
+        risk_band = "high"
+        alert = True
+    elif risk_score >= 0.25:
+        risk_band = "moderate"
+        alert = False
+    else:
+        risk_band = "low"
+        alert = False
+
     top_drivers = []
 
     driver_candidates = [
@@ -52,28 +53,40 @@ else:
                     "value": round(value, 3)
                 })
 
-    top_drivers = sorted(top_drivers, key=lambda x: abs(x["value"]), reverse=True)[:3]
+    top_drivers = sorted(
+        top_drivers,
+        key=lambda x: abs(x["value"]),
+        reverse=True
+    )[:3]
 
     trend_summary = {}
 
     if "spo2_delta" in latest_row.index and pd.notna(latest_row["spo2_delta"]):
         trend_summary["spo2"] = (
-            "down over last 10 minutes" if latest_row["spo2_delta"] < 0 else "up over last 10 minutes"
+            "down over last 10 minutes"
+            if latest_row["spo2_delta"] < 0
+            else "up over last 10 minutes"
         )
 
     if "resp_rate_delta" in latest_row.index and pd.notna(latest_row["resp_rate_delta"]):
         trend_summary["resp_rate"] = (
-            "up over last 10 minutes" if latest_row["resp_rate_delta"] > 0 else "down over last 10 minutes"
+            "up over last 10 minutes"
+            if latest_row["resp_rate_delta"] > 0
+            else "down over last 10 minutes"
         )
 
     if "sbp_delta" in latest_row.index and pd.notna(latest_row["sbp_delta"]):
         trend_summary["sbp"] = (
-            "down slightly" if latest_row["sbp_delta"] < 0 else "up slightly"
+            "down slightly"
+            if latest_row["sbp_delta"] < 0
+            else "up slightly"
         )
 
     if "temperature_delta" in latest_row.index and pd.notna(latest_row["temperature_delta"]):
         trend_summary["temperature"] = (
-            "rising" if latest_row["temperature_delta"] > 0 else "stable or falling"
+            "rising"
+            if latest_row["temperature_delta"] > 0
+            else "stable or falling"
         )
 
     data_quality = "adequate"
@@ -91,7 +104,7 @@ else:
         "trend_summary": trend_summary,
         "data_quality": data_quality,
     }
-
+    
 def summarize_deterioration_strength(patient_df):
     patient_df = patient_df.sort_values("timestamp").copy()
 
