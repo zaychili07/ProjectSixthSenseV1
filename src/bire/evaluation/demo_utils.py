@@ -87,10 +87,6 @@ def summarize_deterioration_strength(patient_df):
 
     return summary
 
-det_summary = summarize_deterioration_strength(patient_example_df)
-
-display(Markdown("## 🚨 Deterioration Snapshot"))
-
 def interpret_change(signal, delta):
     if signal in ["SpO2", "SBP"]:
         if delta < 0:
@@ -105,7 +101,7 @@ def interpret_change(signal, delta):
             return "Improving ↓"
         return "Stable →"
 
-det_df = pd.DataFrame({
+# det_df = pd.DataFrame({
     "Signal": ["SpO2", "Resp Rate", "SBP", "Heart Rate", "Temp"],
     "Start": [
         round(det_summary.get("spo2_start", 0), 2),
@@ -145,7 +141,6 @@ def style_direction(val):
         return "color: white; background-color: #16a34a; font-weight: bold;"
     return "color: black; background-color: #e5e7eb; font-weight: bold;"
 
-display(det_df.style.applymap(style_direction, subset=["Clinical Direction"]))
 
 best_demo_patient = trajectory_summary_df.sort_values(
     ["n_alerts", "max_risk", "n_rows"],
