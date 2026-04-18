@@ -134,3 +134,15 @@ def style_direction(val):
     return "color: black; background-color: #e5e7eb; font-weight: bold;"
 
 display(det_df.style.applymap(style_direction, subset=["Clinical Direction"]))
+
+best_demo_patient = trajectory_summary_df.sort_values(
+    ["n_alerts", "max_risk", "n_rows"],
+    ascending=[False, False, False]
+).iloc[0]["patient_id"]
+
+patient_example_df = df[df["patient_id"] == best_demo_patient].copy()
+patient_example_df = patient_example_df.sort_values("timestamp")
+
+patient_traj = trajectory_summary_df[
+    trajectory_summary_df["patient_id"] == best_demo_patient
+]
