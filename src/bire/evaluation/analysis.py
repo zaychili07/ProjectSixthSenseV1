@@ -37,3 +37,38 @@ def compute_lead_time_summary(
         })
 
     return pd.DataFrame(rows)
+
+import pandas as pd
+
+def build_trajectory_summary_df(
+    df,
+    patient_col="patient_id",
+    risk_col="pred_proba",
+    alert_col="alert",
+    event_col="target",
+):
+    if df.empty:
+        return pd.DataFrame(
+            columns=[
+                patient_col,
+                "n_rows",
+                "max_risk",
+                "mean_risk",
+                "n_alerts",
+                "n_events",
+            ]
+        )
+
+    summary_df = (
+        df.groupby(patient_col)
+        .agg(
+            n_rows=(patient_col, "size"),
+            max_risk=(risk_col, "max"),
+            mean_risk=(risk_col, "mean"),
+            n_alerts=(alert_col, "sum"),
+            n_events=(event_col, "sum"),
+        )
+        .reset_index()
+    )
+
+    return summary_df
