@@ -22,7 +22,7 @@ def build_bire_output_from_patient(
 
     X_latest = latest_row[feature_cols].to_frame().T
     risk_score = float(bire_model.predict_proba(X_latest)[0, 1])
-
+    
     if risk_score >= alert_threshold:
         risk_band = "high"
         alert = True
