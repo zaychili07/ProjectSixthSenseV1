@@ -50,6 +50,10 @@ def compare_models(log_df: pd.DataFrame, xgb_df: pd.DataFrame) -> pd.DataFrame:
 
     return summary
 
+import numpy as np
+from sklearn.metrics import roc_auc_score, average_precision_score
+
+
 def evaluate_binary_model(model, X, y, split_name="split"):
     y_proba = model.predict_proba(X)[:, 1]
 
@@ -61,10 +65,10 @@ def evaluate_binary_model(model, X, y, split_name="split"):
         "pr_auc": np.nan,
     }
 
-    if y.nunique() >= 2:
+    if len(np.unique(y)) >= 2:
         results["roc_auc"] = roc_auc_score(y, y_proba)
         results["pr_auc"] = average_precision_score(y, y_proba)
     else:
-        print(f"Warning: {split_name} has only one class.")
+        results["warning"] = f"{split_name} has only one class"
 
     return results, y_proba
