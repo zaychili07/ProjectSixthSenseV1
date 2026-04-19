@@ -350,3 +350,37 @@ def plot_single_vital_with_threshold(     # focused clinical view
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.show()
+
+
+def plot_patient_event_timeline(patient_df, patient_id, save_path=None):
+    fig = plt.figure(figsize=(12, 6))
+
+    ax1 = fig.add_subplot(2, 1, 1)
+    ax1.plot(patient_df["timestamp"], patient_df["spo2"], label="spo2")
+    ax1.plot(patient_df["timestamp"], patient_df["sbp"], label="sbp")
+    ax1.plot(patient_df["timestamp"], patient_df["heart_rate"], label="heart_rate")
+    ax1.set_title(f"Vitals and Labels for Patient {patient_id}")
+    ax1.set_ylabel("Signal Value")
+    ax1.legend()
+
+    for ts in patient_df.loc[patient_df["event_now"] == 1, "timestamp"]:
+        ax1.axvline(ts, linestyle="--", alpha=0.5)
+
+    for ts in patient_df.loc[patient_df["target"] == 1, "timestamp"]:
+        ax1.axvline(ts, linestyle=":", alpha=0.7)
+
+    ax2 = fig.add_subplot(2, 1, 2)
+    ax2.plot(patient_df["timestamp"], patient_df["event_now"], label="event_now")
+    ax2.plot(patient_df["timestamp"], patient_df["target"], label="target")
+    ax2.set_xlabel("Timestamp")
+    ax2.set_ylabel("Flag")
+    ax2.set_yticks([0, 1])
+    ax2.legend()
+
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+
+    plt.show()
