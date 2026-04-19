@@ -182,7 +182,8 @@ def plot_alert_bar_summary(demo_summary_df):
     if missing:
         raise ValueError(f"demo_summary_df is missing required columns: {missing}")
 
-    # df_plot = demo_summary_df.sort_values("alerts", ascending=False).copy()
+    # THIS MUST EXIST
+    df_plot = demo_summary_df.sort_values("alerts", ascending=False).copy()
 
     colors = ["#d62728" if x > 0 else "#2ca02c" for x in df_plot["alerts"]]
 
