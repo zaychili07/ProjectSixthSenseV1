@@ -49,3 +49,22 @@ def compare_models(log_df: pd.DataFrame, xgb_df: pd.DataFrame) -> pd.DataFrame:
     )
 
     return summary
+
+def evaluate_binary_model(model, X, y, split_name="split"):
+    y_proba = model.predict_proba(X)[:, 1]
+
+    results = {
+        "split": split_name,
+        "n_rows": len(y),
+        "positive_rate": float(np.mean(y)),
+        "roc_auc": np.nan,
+        "pr_auc": np.nan,
+    }
+
+    if y.nunique() >= 2:
+        results["roc_auc"] = roc_auc_score(y, y_proba)
+        results["pr_auc"] = average_precision_score(y, y_proba)
+    else:
+        print(f"Warning: {split_name} has only one class.")
+
+    return results, y_proba
