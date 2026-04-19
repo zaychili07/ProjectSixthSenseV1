@@ -1,19 +1,21 @@
+import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import average_precision_score, roc_auc_score
 
 
 def compute_auc(y_true, y_proba):
     """
-    Safe AUC computation (handles single-class edge case).
+    Safe ROC-AUC computation.
+    Returns np.nan when only one class is present.
     """
     if len(set(y_true)) < 2:
-        return None
+        return np.nan
     return roc_auc_score(y_true, y_proba)
 
 
 def summarize_split(train_df: pd.DataFrame, test_df: pd.DataFrame) -> dict:
     """
-    Summarize time-aware split.
+    Summarize a time-aware train/test split.
     """
     return {
         "train_rows": len(train_df),
@@ -27,7 +29,7 @@ def summarize_split(train_df: pd.DataFrame, test_df: pd.DataFrame) -> dict:
 
 def compare_models(log_df: pd.DataFrame, xgb_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Compare model outputs (alerts + risk stats).
+    Compare alert and risk behavior across two model outputs.
     """
     log_df = log_df.copy()
     log_df["model"] = "logistic_regression"
@@ -50,11 +52,12 @@ def compare_models(log_df: pd.DataFrame, xgb_df: pd.DataFrame) -> pd.DataFrame:
 
     return summary
 
-import numpy as np
-from sklearn.metrics import roc_auc_score, average_precision_score
-
 
 def evaluate_binary_model(model, X, y, split_name="split"):
+    """
+    Evaluate binary classification performance on one split.
+    Returns a results dictionary and predicted probabilities.
+    """
     y_proba = model.predict_proba(X)[:, 1]
 
     results = {
@@ -72,3 +75,36 @@ def evaluate_binary_model(model, X, y, split_name="split"):
         results["warning"] = f"{split_name} has only one class"
 
     return results, y_proba
+
+
+def evaluate_multiple_splits(model, splits_dict):
+    """
+    Evaluate a model across multiple named splits.
+
+    Parameters
+    ----------
+    model : fitted classifier
+        Must support predict_proba().
+    splits_dict : dict
+        Example:
+        {
+            "val": (X_val, y_val),
+            "test": (X_test, y_test),
+        }
+
+    Returns
+    -------
+    results_df : pd.DataFrame
+        One row per split.
+    all_probas : dict
+        Mapping of split name -> predicted probabilities.
+    """
+    all_results = []
+    all_probas = {}
+
+    for split_name, (X, y) in splits_dict.items():
+        results, proba = evaluate_binary_model(model, X, y, split_name)
+        all_results.append(results)
+        all_probas[split_name] = proba
+
+    return pd.DataFrame(all_results), all_probas
