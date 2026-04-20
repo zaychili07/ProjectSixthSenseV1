@@ -7,7 +7,7 @@ from xgboost import XGBClassifier
 from bire.evaluation.metrics import evaluate_multiple_splits
 
 
-def time_aware_patient_split(df, random_state: int = 42):
+def patient_level_split(df, random_state: int = 42):
     """
     Patient-level train/val/test split to avoid leakage across patients.
     """
@@ -65,11 +65,16 @@ def run_bire_modeling(df, feature_cols, threshold=0.5, random_state: int = 42):
     if missing:
         raise ValueError(f"Missing features: {missing}")
 
-    required_cols = ["patient_id", "target"] + feature_cols
+    optional_keep_cols = [c for c in ["timestamp", "event_now"] if c in df.columns]
+    required_cols = ["patient_id", "target"] + optional_keep_cols + feature_cols
+
     work_df = df[required_cols].copy()
     work_df = work_df.dropna(subset=["target"])
 
-    train_df, val_df, test_df = time_aware_patient_split(work_df, random_state=random_state)
+    train_df, val_df, test_df = patient_level_split(
+        work_df,
+        random_state=random_state,
+    )
 
     print("target in train_df:", "target" in train_df.columns)
     print("target in val_df:", "target" in val_df.columns)
