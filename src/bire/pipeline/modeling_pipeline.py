@@ -9,32 +9,85 @@ from bire.evaluation.metrics import evaluate_multiple_splits
 
 def patient_level_split(df, random_state: int = 42):
     """
-    Patient-level train/val/test split to avoid leakage across patients.
+    Patient-level train/val/test split with stratification on patient-level
+    target presence to avoid leakage and reduce risk of single-class splits.
     """
-    patients = df["patient_id"].dropna().unique()
+    required_cols = {"patient_id", "target"}
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"patient_level_split missing required columns: {sorted(missing)}")
+
+    patient_summary = (
+        df.groupby("patient_id", as_index=False)["target"]
+        .max()
+        .rename(columns={"target": "any_target"})
+    )
+
+    if patient_summary.empty:
+        raise ValueError("No patients available for splitting.")
+
+    if patient_summary["any_target"].nunique() < 2:
+        raise ValueError(
+            "Patient-level target summary has only one class. "
+            f"Counts: {patient_summary['any_target'].value_counts(dropna=False).to_dict()}"
+        )
+
+    patient_class_counts = patient_summary["any_target"].value_counts()
+    min_class_count = patient_class_counts.min()
+
+    if len(patient_summary) < 3:
+        raise ValueError(
+            "Need at least 3 patients to create train/val/test splits."
+        )
+
+    train_stratify = patient_summary["any_target"] if min_class_count >= 2 else None
 
     train_p, temp_p = train_test_split(
-        patients,
+        patient_summary["patient_id"],
         test_size=0.4,
         random_state=random_state,
+        stratify=train_stratify,
     )
+
+    temp_summary = patient_summary[patient_summary["patient_id"].isin(temp_p)].copy()
+
+    if temp_summary["any_target"].nunique() < 2:
+        raise ValueError(
+            "Temp patient split has only one class. "
+            "Increase positive patients or adjust split strategy."
+        )
+
+    temp_class_counts = temp_summary["any_target"].value_counts()
+    temp_min_class_count = temp_class_counts.min()
+    temp_stratify = temp_summary["any_target"] if temp_min_class_count >= 2 else None
+
     val_p, test_p = train_test_split(
-        temp_p,
+        temp_summary["patient_id"],
         test_size=0.5,
         random_state=random_state,
+        stratify=temp_stratify,
     )
 
     train_df = df[df["patient_id"].isin(train_p)].copy()
     val_df = df[df["patient_id"].isin(val_p)].copy()
     test_df = df[df["patient_id"].isin(test_p)].copy()
 
+    for split_name, split_df in {
+        "train": train_df,
+        "val": val_df,
+        "test": test_df,
+    }.items():
+        if split_df.empty:
+            raise ValueError(f"{split_name} split is empty.")
+
     return train_df, val_df, test_df
 
 
 def build_logistic_model(random_state: int = 42):
     return LogisticRegression(
-        max_iter=1000,
+        max_iter=2000,
         class_weight="balanced",
+        solver="liblinear",
         random_state=random_state,
     )
 
@@ -57,9 +110,26 @@ def apply_alert_logic(df: pd.DataFrame, threshold: float = 0.5) -> pd.DataFrame:
     return out
 
 
+def _validate_binary_target(series: pd.Series, name: str):
+    non_null = series.dropna()
+    if non_null.empty:
+        raise ValueError(f"{name} is empty after dropping nulls.")
+
+    unique_vals = sorted(non_null.unique().tolist())
+    if len(unique_vals) < 2:
+        raise ValueError(
+            f"{name} has only one class: {non_null.value_counts(dropna=False).to_dict()}"
+        )
+
+
 def run_bire_modeling(df, feature_cols, threshold=0.5, random_state: int = 42):
     print("Inside modeling function")
     print("target in input df:", "target" in df.columns)
+
+    if "patient_id" not in df.columns:
+        raise ValueError("Input dataframe must contain 'patient_id'.")
+    if "target" not in df.columns:
+        raise ValueError("Input dataframe must contain 'target'.")
 
     missing = [c for c in feature_cols if c not in df.columns]
     if missing:
@@ -71,6 +141,17 @@ def run_bire_modeling(df, feature_cols, threshold=0.5, random_state: int = 42):
     work_df = df[required_cols].copy()
     work_df = work_df.dropna(subset=["target"])
 
+    if work_df.empty:
+        raise ValueError("No rows remain after dropping null targets.")
+
+    _validate_binary_target(work_df["target"], "Full dataframe target")
+
+    print("Full row-level target counts:", work_df["target"].value_counts(dropna=False).to_dict())
+    print(
+        "Full patient-level any_target counts:",
+        work_df.groupby("patient_id")["target"].max().value_counts(dropna=False).to_dict()
+    )
+
     train_df, val_df, test_df = patient_level_split(
         work_df,
         random_state=random_state,
@@ -80,14 +161,35 @@ def run_bire_modeling(df, feature_cols, threshold=0.5, random_state: int = 42):
     print("target in val_df:", "target" in val_df.columns)
     print("target in test_df:", "target" in test_df.columns)
 
-    X_train = train_df[feature_cols]
-    y_train = train_df["target"]
+    print("Train row-level target counts:", train_df["target"].value_counts(dropna=False).to_dict())
+    print("Val row-level target counts:", val_df["target"].value_counts(dropna=False).to_dict())
+    print("Test row-level target counts:", test_df["target"].value_counts(dropna=False).to_dict())
 
-    X_val = val_df[feature_cols]
-    y_val = val_df["target"]
+    print(
+        "Train patient-level any_target counts:",
+        train_df.groupby("patient_id")["target"].max().value_counts(dropna=False).to_dict()
+    )
+    print(
+        "Val patient-level any_target counts:",
+        val_df.groupby("patient_id")["target"].max().value_counts(dropna=False).to_dict()
+    )
+    print(
+        "Test patient-level any_target counts:",
+        test_df.groupby("patient_id")["target"].max().value_counts(dropna=False).to_dict()
+    )
 
-    X_test = test_df[feature_cols]
-    y_test = test_df["target"]
+    X_train = train_df[feature_cols].copy()
+    y_train = train_df["target"].copy()
+
+    X_val = val_df[feature_cols].copy()
+    y_val = val_df["target"].copy()
+
+    X_test = test_df[feature_cols].copy()
+    y_test = test_df["target"].copy()
+
+    _validate_binary_target(y_train, "Training target")
+    _validate_binary_target(y_val, "Validation target")
+    _validate_binary_target(y_test, "Test target")
 
     imputer = SimpleImputer(strategy="median")
 
