@@ -9,7 +9,7 @@ def plot_patient_risk_trajectory(
     patient_id,
     time_col="timestamp",
     risk_col="pred_proba",
-    alert_col="alert",
+    alert_col="alert_episode_flag",
     event_col="target",
     threshold=0.5,
 ):
