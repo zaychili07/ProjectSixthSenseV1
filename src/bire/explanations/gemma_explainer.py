@@ -1,12 +1,10 @@
-from transformers import AutoProcessor, AutoModelForCausalLM
+from transformers import AutoProcessor, AutoModelForMultimodalLM
 
-
-GEMMA_MODEL_ID = "google/gemma-4-E2B-it"
-
+GEMMA_MODEL_ID = "google/gemma-4-E2B-it"   # or your chosen Gemma 4 checkpoint
 
 def load_gemma_explainer():
     gemma_processor = AutoProcessor.from_pretrained(GEMMA_MODEL_ID)
-    gemma_model = AutoModelForCausalLM.from_pretrained(
+    gemma_model = AutoModelForMultimodalLM.from_pretrained(
         GEMMA_MODEL_ID,
         dtype="auto",
         device_map="auto",
