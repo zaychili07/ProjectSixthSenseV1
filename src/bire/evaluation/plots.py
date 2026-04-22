@@ -167,21 +167,20 @@ import matplotlib.pyplot as plt
 
 
 def plot_alert_bar_summary(demo_summary_df):
-    """
-    Plot alert counts by patient for demo summary output.
+    df = demo_summary_df.copy()
 
-    Parameters
-    ----------
-    demo_summary_df : pd.DataFrame
-        DataFrame expected to contain:
-        - patient_id
-        - alerts
-    """
+    if "alerts" not in df.columns:
+        if "n_alerts" in df.columns:
+            df["alerts"] = df["n_alerts"]
+        else:
+            raise ValueError("demo_summary_df must contain 'alerts' or 'n_alerts'")
+
     required_cols = {"patient_id", "alerts"}
-    missing = required_cols - set(demo_summary_df.columns)
+    missing = required_cols - set(df.columns)
     if missing:
         raise ValueError(f"demo_summary_df is missing required columns: {missing}")
 
+    # rest of plotting code uses df["alerts"]
     # THIS MUST EXIST
     df_plot = demo_summary_df.sort_values("alerts", ascending=False).copy()
 
