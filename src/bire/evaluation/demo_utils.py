@@ -295,3 +295,17 @@ def select_best_demo_patient(trajectory_summary_df):
     ).iloc[0]
 
     return best_row["patient_id"]
+
+def build_top_drivers_table(bire_output):
+    df = pd.DataFrame(bire_output.get("top_drivers", []))
+    if not df.empty and "importance" in df.columns:
+        df["importance"] = df["importance"].round(4)
+    return df
+
+
+def build_trend_summary_table(bire_output):
+    trend_summary = bire_output.get("trend_summary", {})
+    df = pd.DataFrame(
+        [{"vital": k, "trend": v} for k, v in trend_summary.items()]
+    )
+    return df
