@@ -17,8 +17,10 @@ def build_bire_output_from_patient(
 
     patient_df = patient_df.sort_values("timestamp").copy()
     latest_row = patient_df.iloc[-1]
-
-    X_latest = latest_row[feature_cols].to_frame().T
+   
+    X_latest = latest_row[feature_cols].to_frame().T.copy()
+    
+    X_latest = X_latest.apply(pd.to_numeric, errors="coerce")
     risk_score = float(bire_model.predict_proba(X_latest)[0, 1])
 
     # -----------------------------
