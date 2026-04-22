@@ -1,10 +1,12 @@
 import pandas as pd
+import numpy as np
 
 
 def build_bire_output_from_patient(
     patient_df,
     feature_cols,
     bire_model,
+    alert_threshold=0.40,
 ):
     if patient_df.empty:
         raise ValueError("patient_df is empty")
@@ -19,7 +21,10 @@ def build_bire_output_from_patient(
     X_latest = latest_row[feature_cols].to_frame().T
     risk_score = float(bire_model.predict_proba(X_latest)[0, 1])
 
-    if risk_score >= 0.5:
+    # -----------------------------
+    # Risk band aligned to BIRE alerting
+    # -----------------------------
+    if risk_score >= alert_threshold:
         risk_band = "high"
         alert = True
     elif risk_score >= 0.25:
@@ -29,28 +34,63 @@ def build_bire_output_from_patient(
         risk_band = "low"
         alert = False
 
+    # -----------------------------
+    # Driver extraction
+    # -----------------------------
     top_drivers = []
-    for col in feature_cols:
-        if "delta" in col and col in patient_df.columns:
+
+    # Prefer model-based feature importance when available
+    model_importance = None
+    if hasattr(bire_model, "feature_importances_"):
+        model_importance = dict(
+            zip(feature_cols, bire_model.feature_importances_)
+        )
+    elif hasattr(bire_model, "coef_"):
+        model_importance = dict(
+            zip(feature_cols, np.abs(bire_model.coef_[0]))
+        )
+
+    if model_importance is not None:
+        driver_rows = []
+        for col in feature_cols:
             val = latest_row[col]
-            if pd.notna(val) and abs(val) > 0:
-                top_drivers.append({
+            if pd.notna(val):
+                driver_rows.append({
                     "feature": col,
-                    "direction": "worsening",
                     "value": float(val),
+                    "importance": float(model_importance.get(col, 0.0)),
+                    "direction": infer_driver_direction(col, val),
                 })
 
-    top_drivers = sorted(
-        top_drivers,
-        key=lambda x: abs(x["value"]),
-        reverse=True,
-    )[:3]
+        top_drivers = sorted(
+            driver_rows,
+            key=lambda x: x["importance"],
+            reverse=True,
+        )[:5]
 
-    trend_summary = {
-        k: "changing"
-        for k in ["spo2", "resp_rate", "sbp", "heart_rate", "temperature"]
-        if k in patient_df.columns
-    }
+    else:
+        # fallback
+        for col in feature_cols:
+            if "delta" in col:
+                val = latest_row[col]
+                if pd.notna(val) and abs(val) > 0:
+                    top_drivers.append({
+                        "feature": col,
+                        "direction": infer_driver_direction(col, val),
+                        "value": float(val),
+                        "importance": abs(float(val)),
+                    })
+
+        top_drivers = sorted(
+            top_drivers,
+            key=lambda x: x["importance"],
+            reverse=True,
+        )[:5]
+
+    # -----------------------------
+    # Trend summary
+    # -----------------------------
+    trend_summary = build_trend_summary(patient_df)
 
     return {
         "patient_id": str(latest_row["patient_id"]),
@@ -62,6 +102,53 @@ def build_bire_output_from_patient(
         "trend_summary": trend_summary,
         "data_quality": "adequate",
     }
+
+
+def infer_driver_direction(feature_name, value):
+    feature_lower = feature_name.lower()
+
+    if "spo2" in feature_lower or "sbp" in feature_lower or "dbp" in feature_lower:
+        if value < 0:
+            return "worsening"
+        elif value > 0:
+            return "improving"
+        return "stable"
+
+    if "heart_rate" in feature_lower or "resp_rate" in feature_lower or "temp" in feature_lower:
+        if value > 0:
+            return "worsening"
+        elif value < 0:
+            return "improving"
+        return "stable"
+
+    if "std" in feature_lower:
+        if value > 0:
+            return "instability rising"
+        return "stable"
+
+    return "changing"
+
+
+def build_trend_summary(patient_df):
+    df = patient_df.sort_values("timestamp").copy()
+    trend_summary = {}
+
+    signal_map = {
+        "spo2": "SpO2",
+        "resp_rate": "Resp Rate",
+        "sbp": "SBP",
+        "heart_rate": "Heart Rate",
+        "temperature": "Temperature",
+    }
+
+    for col in signal_map:
+        if col in df.columns and len(df) >= 2:
+            start_val = df[col].iloc[0]
+            end_val = df[col].iloc[-1]
+            delta = end_val - start_val
+            trend_summary[col] = interpret_change(signal_map[col], delta)
+
+    return trend_summary
 
 
 def summarize_deterioration_strength(patient_df):
