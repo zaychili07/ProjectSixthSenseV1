@@ -459,17 +459,30 @@ def build_alert_episode_evaluation_df(
     alert_slice = alert_df[[patient_col, time_col, alert_col]].copy()
     alert_slice[time_col] = pd.to_datetime(alert_slice[time_col])
 
+    # Prevent merge suffix collisions like alert_episode_flag_x / _y
+    cols_to_drop = [
+        c for c in eval_df.columns
+        if c == alert_col or c.startswith(f"{alert_col}_")
+    ]
+    if cols_to_drop:
+        eval_df = eval_df.drop(columns=cols_to_drop)
+
     eval_df = eval_df.merge(
         alert_slice,
         on=[patient_col, time_col],
         how="left",
     )
 
+    if alert_col not in eval_df.columns:
+        raise ValueError(
+            f"Expected merged alert column '{alert_col}' not found. "
+            f"Available alert-like columns: {[c for c in eval_df.columns if 'alert' in c.lower()]}"
+        )
+
     eval_df[alert_col] = eval_df[alert_col].fillna(0).astype(int)
     eval_df["row_hours"] = interval_minutes / 60.0
 
     return eval_df
-
 
 def summarize_alert_burden(
     eval_df: pd.DataFrame,
