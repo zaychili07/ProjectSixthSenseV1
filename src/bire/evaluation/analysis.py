@@ -221,3 +221,206 @@ def compute_event_leadtime_outputs(
     )
     lead_time_summary_df = summarize_event_leadtime(event_lead_df)
     return event_lead_df, lead_time_summary_df
+
+
+import numpy as np
+import pandas as pd
+
+
+def build_bire_evaluation_df(
+    scored_df: pd.DataFrame,
+    alert_df: pd.DataFrame,
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    alert_col: str = "alert_episode_flag",
+) -> pd.DataFrame:
+    """
+    Build the canonical BIRE evaluation dataframe by merging model scores
+    with alert episode flags.
+    """
+    if scored_df.empty:
+        raise ValueError("scored_df is empty")
+
+    required_scored = {patient_col, time_col, "pred_proba"}
+    missing_scored = required_scored - set(scored_df.columns)
+    if missing_scored:
+        raise ValueError(f"scored_df missing required columns: {missing_scored}")
+
+    required_alert = {patient_col, time_col, alert_col}
+    missing_alert = required_alert - set(alert_df.columns)
+    if missing_alert:
+        raise ValueError(f"alert_df missing required columns: {missing_alert}")
+
+    bire_df = scored_df.copy()
+
+    if alert_col not in bire_df.columns:
+        bire_df = bire_df.merge(
+            alert_df[[patient_col, time_col, alert_col]],
+            on=[patient_col, time_col],
+            how="left",
+        )
+
+    bire_df[alert_col] = bire_df[alert_col].fillna(0).astype(int)
+    bire_df[time_col] = pd.to_datetime(bire_df[time_col])
+    bire_df = bire_df.sort_values([patient_col, time_col]).copy()
+
+    return bire_df
+
+
+def build_event_leadtime_table(
+    df: pd.DataFrame,
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    event_col: str = "event_now",
+    alert_col: str = "alert_episode_flag",
+) -> pd.DataFrame:
+    """
+    Build one row per event with first-alert lead time metrics.
+    Event is anchored on 0->1 transitions of event_col.
+    """
+    work_df = df.copy()
+    work_df[time_col] = pd.to_datetime(work_df[time_col])
+    work_df = work_df.sort_values([patient_col, time_col]).copy()
+
+    required_cols = {patient_col, time_col, alert_col, event_col}
+    missing = required_cols - set(work_df.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")
+
+    event_rows = []
+
+    for patient_id, patient_df in work_df.groupby(patient_col, sort=False):
+        patient_df = patient_df.sort_values(time_col).copy()
+
+        patient_df["prev_event"] = (
+            patient_df[event_col].shift(1).fillna(0).astype(int)
+        )
+        patient_df["event_start_flag"] = (
+            (patient_df[event_col] == 1) &
+            (patient_df["prev_event"] == 0)
+        ).astype(int)
+
+        event_times = patient_df.loc[
+            patient_df["event_start_flag"] == 1, time_col
+        ].tolist()
+
+        alert_times = patient_df.loc[
+            patient_df[alert_col] == 1, time_col
+        ].sort_values().tolist()
+
+        for idx, event_time in enumerate(event_times, start=1):
+            prior_alerts = [t for t in alert_times if t < event_time]
+
+            if prior_alerts:
+                first_alert_time = prior_alerts[0]
+                last_alert_time = prior_alerts[-1]
+                first_lead_min = (
+                    event_time - first_alert_time
+                ).total_seconds() / 60.0
+                last_lead_min = (
+                    event_time - last_alert_time
+                ).total_seconds() / 60.0
+                detected = 1
+            else:
+                first_alert_time = pd.NaT
+                last_alert_time = pd.NaT
+                first_lead_min = np.nan
+                last_lead_min = np.nan
+                detected = 0
+
+            event_rows.append({
+                "patient_id": patient_id,
+                "event_id": f"{patient_id}_event_{idx}",
+                "event_time": event_time,
+                "detected_before_event": detected,
+                "first_alert_time": first_alert_time,
+                "last_alert_time_before_event": last_alert_time,
+                "first_alert_lead_minutes": first_lead_min,
+                "last_alert_lead_minutes": last_lead_min,
+                "detected_ge_15m": int(detected == 1 and first_lead_min >= 15),
+                "detected_ge_30m": int(detected == 1 and first_lead_min >= 30),
+                "detected_ge_60m": int(detected == 1 and first_lead_min >= 60),
+            })
+
+    return pd.DataFrame(event_rows)
+
+
+def summarize_event_leadtime(event_lead_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Summarize event-level lead-time performance into headline metrics.
+    """
+    if event_lead_df.empty:
+        return pd.DataFrame([{
+            "n_events": 0,
+            "events_detected_before_event": 0,
+            "event_detection_rate": np.nan,
+            "median_first_alert_lead_min": np.nan,
+            "mean_first_alert_lead_min": np.nan,
+            "pct_detected_ge_15m": np.nan,
+            "pct_detected_ge_30m": np.nan,
+            "pct_detected_ge_60m": np.nan,
+        }])
+
+    detected_df = event_lead_df.loc[
+        event_lead_df["detected_before_event"] == 1
+    ].copy()
+
+    return pd.DataFrame([{
+        "n_events": len(event_lead_df),
+        "events_detected_before_event": int(
+            event_lead_df["detected_before_event"].sum()
+        ),
+        "event_detection_rate": round(
+            event_lead_df["detected_before_event"].mean(), 4
+        ),
+        "median_first_alert_lead_min": round(
+            detected_df["first_alert_lead_minutes"].median(), 2
+        ) if not detected_df.empty else np.nan,
+        "mean_first_alert_lead_min": round(
+            detected_df["first_alert_lead_minutes"].mean(), 2
+        ) if not detected_df.empty else np.nan,
+        "pct_detected_ge_15m": round(
+            event_lead_df["detected_ge_15m"].mean(), 4
+        ),
+        "pct_detected_ge_30m": round(
+            event_lead_df["detected_ge_30m"].mean(), 4
+        ),
+        "pct_detected_ge_60m": round(
+            event_lead_df["detected_ge_60m"].mean(), 4
+        ),
+    }])
+
+
+def compute_event_leadtime_outputs(
+    scored_df: pd.DataFrame,
+    alert_df: pd.DataFrame,
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    event_col: str = "event_now",
+    alert_col: str = "alert_episode_flag",
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    End-to-end helper:
+    1) builds canonical bire_df
+    2) builds event_lead_df
+    3) builds lead_time_summary_df
+    """
+    bire_df = build_bire_evaluation_df(
+        scored_df=scored_df,
+        alert_df=alert_df,
+        patient_col=patient_col,
+        time_col=time_col,
+        alert_col=alert_col,
+    )
+
+    event_lead_df = build_event_leadtime_table(
+        df=bire_df,
+        patient_col=patient_col,
+        time_col=time_col,
+        event_col=event_col,
+        alert_col=alert_col,
+    )
+
+    lead_time_summary_df = summarize_event_leadtime(event_lead_df)
+
+    return bire_df, event_lead_df, lead_time_summary_df
