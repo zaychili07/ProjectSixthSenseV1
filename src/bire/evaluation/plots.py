@@ -394,3 +394,119 @@ def plot_patient_event_timeline(patient_df, patient_id, save_path=None):
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
     plt.show()
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+def plot_leadtime_distribution(
+    event_lead_df: pd.DataFrame,
+    lead_col: str = "first_alert_lead_minutes",
+    detected_col: str = "detected_before_event",
+    bins: int = 20,
+) -> None:
+    """
+    Plot distribution of lead times for events detected before deterioration.
+    """
+    if event_lead_df.empty:
+        raise ValueError("event_lead_df is empty")
+
+    required_cols = {lead_col, detected_col}
+    missing = required_cols - set(event_lead_df.columns)
+    if missing:
+        raise ValueError(f"event_lead_df missing required columns: {missing}")
+
+    detected_events_df = event_lead_df.loc[
+        event_lead_df[detected_col] == 1
+    ].copy()
+
+    if detected_events_df.empty:
+        raise ValueError("No detected events available for lead-time distribution")
+
+    plt.figure(figsize=(8, 5))
+    plt.hist(detected_events_df[lead_col].dropna(), bins=bins)
+    plt.title("Distribution of First-Alert Lead Time")
+    plt.xlabel("Lead Time (minutes)")
+    plt.ylabel("Number of Events")
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_event_detection_summary(
+    event_lead_df: pd.DataFrame,
+    detected_col: str = "detected_before_event",
+) -> None:
+    """
+    Plot event-level detected vs missed counts.
+    """
+    if event_lead_df.empty:
+        raise ValueError("event_lead_df is empty")
+
+    if detected_col not in event_lead_df.columns:
+        raise ValueError(f"event_lead_df missing required column: {detected_col}")
+
+    event_status_counts = event_lead_df[detected_col].value_counts().sort_index()
+
+    status_labels = ["Missed", "Detected Before Event"]
+    status_values = [
+        event_status_counts.get(0, 0),
+        event_status_counts.get(1, 0),
+    ]
+
+    plt.figure(figsize=(6, 4))
+    plt.bar(status_labels, status_values)
+    plt.title("Event-Level Detection Summary")
+    plt.ylabel("Number of Events")
+    plt.tight_layout()
+    plt.show()
+
+
+def build_event_leadtime_display_table(
+    event_lead_df: pd.DataFrame,
+    sort_cols: list[str] | None = None,
+    ascending: list[bool] | None = None,
+    round_cols: list[str] | None = None,
+    top_n: int = 25,
+) -> pd.DataFrame:
+    """
+    Build a presentation-ready event lead-time table.
+    """
+    if event_lead_df.empty:
+        return pd.DataFrame()
+
+    display_df = event_lead_df.copy()
+
+    if round_cols is None:
+        round_cols = ["first_alert_lead_minutes", "last_alert_lead_minutes"]
+
+    for col in round_cols:
+        if col in display_df.columns:
+            display_df[col] = display_df[col].round(1)
+
+    if sort_cols is None:
+        sort_cols = ["detected_before_event", "first_alert_lead_minutes"]
+
+    if ascending is None:
+        ascending = [False, False]
+
+    display_df = display_df.sort_values(sort_cols, ascending=ascending)
+
+    if top_n is not None:
+        display_df = display_df.head(top_n)
+
+    return display_df
+
+
+def plot_event_leadtime_suite(
+    event_lead_df: pd.DataFrame,
+    top_n: int = 25,
+) -> pd.DataFrame:
+    """
+    Convenience helper:
+    1) lead-time histogram
+    2) missed vs detected bar chart
+    3) returns display-ready table
+    """
+    plot_leadtime_distribution(event_lead_df)
+    plot_event_detection_summary(event_lead_df)
+    return build_event_leadtime_display_table(event_lead_df, top_n=top_n)
