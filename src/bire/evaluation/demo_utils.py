@@ -153,21 +153,71 @@ def build_trend_summary(patient_df):
     return trend_summary
 
 
-def summarize_deterioration_strength(patient_df):
-    df = patient_df.sort_values("timestamp").copy()
+import pandas as pd
 
-    summary = {}
-    signals = ["spo2", "resp_rate", "sbp", "heart_rate", "temperature"]
 
-    for col in signals:
-        if col in df.columns and len(df) >= 2:
-            start_val = df[col].iloc[0]
-            end_val = df[col].iloc[-1]
-            summary[f"{col}_start"] = float(start_val)
-            summary[f"{col}_end"] = float(end_val)
-            summary[f"{col}_delta_total"] = float(end_val - start_val)
+def summarize_deterioration_strength(patient_df: pd.DataFrame) -> list[dict]:
+    """
+    Summarize directional change in key vitals across a patient's trajectory.
+    """
+    if patient_df is None or patient_df.empty:
+        raise ValueError("patient_df is empty")
 
-    return summary
+    signal_map = {
+        "SpO2": "spo2",
+        "Resp Rate": "resp_rate",
+        "SBP": "sbp",
+        "Heart Rate": "heart_rate",
+        "Temp": "temperature",
+    }
+
+    summary_rows = []
+
+    for signal_name, col in signal_map.items():
+        if col not in patient_df.columns:
+            summary_rows.append({
+                "Signal": signal_name,
+                "Start": pd.NA,
+                "End": pd.NA,
+                "Total Change": pd.NA,
+                "Clinical Direction": "Missing column",
+            })
+            continue
+
+        signal_series = patient_df[col].dropna()
+
+        if signal_series.empty:
+            summary_rows.append({
+                "Signal": signal_name,
+                "Start": pd.NA,
+                "End": pd.NA,
+                "Total Change": pd.NA,
+                "Clinical Direction": "No data",
+            })
+            continue
+
+        start_val = signal_series.iloc[0]
+        end_val = signal_series.iloc[-1]
+        delta = end_val - start_val
+
+        if col == "spo2":
+            direction = "Worsening ↓" if delta < 0 else "Improving ↑" if delta > 0 else "Stable →"
+        elif col in ["resp_rate", "heart_rate", "temperature"]:
+            direction = "Worsening ↑" if delta > 0 else "Improving ↓" if delta < 0 else "Stable →"
+        elif col == "sbp":
+            direction = "Worsening ↓" if delta < 0 else "Improving ↑" if delta > 0 else "Stable →"
+        else:
+            direction = "Stable →"
+
+        summary_rows.append({
+            "Signal": signal_name,
+            "Start": round(float(start_val), 2),
+            "End": round(float(end_val), 2),
+            "Total Change": round(float(delta), 2),
+            "Clinical Direction": direction,
+        })
+
+    return summary_rows
 
 
 def interpret_change(signal, delta):
