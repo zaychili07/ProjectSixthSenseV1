@@ -510,3 +510,69 @@ def plot_event_leadtime_suite(
     plot_leadtime_distribution(event_lead_df)
     plot_event_detection_summary(event_lead_df)
     return build_event_leadtime_display_table(event_lead_df, top_n=top_n)
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+
+def plot_alert_burden_distribution(
+    patient_alert_burden_df: pd.DataFrame,
+    burden_col: str = "alerts_per_patient_hour",
+    bins: int = 15,
+) -> None:
+    if patient_alert_burden_df.empty:
+        raise ValueError("patient_alert_burden_df is empty")
+    if burden_col not in patient_alert_burden_df.columns:
+        raise ValueError(f"Missing burden column: {burden_col}")
+
+    plt.figure(figsize=(8, 5))
+    plt.hist(patient_alert_burden_df[burden_col].dropna(), bins=bins)
+    plt.title("Distribution of Alert Burden per Patient-Hour")
+    plt.xlabel("Alerts per Patient-Hour")
+    plt.ylabel("Number of Patients")
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_top_alert_burden_patients(
+    patient_alert_burden_df: pd.DataFrame,
+    top_n: int = 10,
+) -> pd.DataFrame:
+    if patient_alert_burden_df.empty:
+        raise ValueError("patient_alert_burden_df is empty")
+
+    display_df = (
+        patient_alert_burden_df
+        .sort_values("alerts_per_patient_hour", ascending=False)
+        .head(top_n)
+        .copy()
+    )
+
+    plt.figure(figsize=(10, 5))
+    plt.bar(display_df["patient_id"].astype(str), display_df["alerts_per_patient_hour"])
+    plt.title(f"Top {top_n} Patients by Alert Burden")
+    plt.xlabel("Patient ID")
+    plt.ylabel("Alerts per Patient-Hour")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+    return display_df
+
+
+def plot_false_alert_episode_summary(
+    false_alert_summary_df: pd.DataFrame,
+) -> None:
+    if false_alert_summary_df.empty:
+        raise ValueError("false_alert_summary_df is empty")
+
+    row = false_alert_summary_df.iloc[0]
+    labels = ["True Alert Episodes", "False Alert Episodes"]
+    values = [row["true_alert_episodes"], row["false_alert_episodes"]]
+
+    plt.figure(figsize=(6, 4))
+    plt.bar(labels, values)
+    plt.title("True vs False Alert Episodes")
+    plt.ylabel("Count")
+    plt.tight_layout()
+    plt.show()
