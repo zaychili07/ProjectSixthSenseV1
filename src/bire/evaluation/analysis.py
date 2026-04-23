@@ -1,5 +1,5 @@
 import pandas as pd
-
+import numpy as np
 
 def compute_lead_time_summary(
     df: pd.DataFrame,
@@ -42,7 +42,6 @@ def compute_lead_time_summary(
 
     return pd.DataFrame(rows)
 
-import pandas as pd
 
 def build_trajectory_summary_df(
     df,
@@ -77,8 +76,6 @@ def build_trajectory_summary_df(
 
     return summary_df
 
-import numpy as np
-import pandas as pd
 
 
 def build_event_leadtime_table(
@@ -221,10 +218,6 @@ def compute_event_leadtime_outputs(
     )
     lead_time_summary_df = summarize_event_leadtime(event_lead_df)
     return event_lead_df, lead_time_summary_df
-
-
-import numpy as np
-import pandas as pd
 
 
 def build_bire_evaluation_df(
@@ -425,9 +418,6 @@ def compute_event_leadtime_outputs(
 
     return bire_df, event_lead_df, lead_time_summary_df
 
-import pandas as pd
-import numpy as np
-
 
 def build_alert_episode_evaluation_df(
     scored_df: pd.DataFrame,
@@ -516,8 +506,8 @@ def summarize_alert_burden(
         "alerts_per_patient_hour", ascending=False
     ).reset_index(drop=True)
 
-
-def summarize_false_alert_episodes(
+# this function will prevent a false alert by sending it as true besides just false using foreward looking targets.
+def summarize_false_alert_episodes( 
     eval_df: pd.DataFrame,
     patient_col: str = "patient_id",
     time_col: str = "timestamp",
