@@ -424,3 +424,172 @@ def compute_event_leadtime_outputs(
     lead_time_summary_df = summarize_event_leadtime(event_lead_df)
 
     return bire_df, event_lead_df, lead_time_summary_df
+
+import pandas as pd
+import numpy as np
+
+
+def build_alert_episode_evaluation_df(
+    scored_df: pd.DataFrame,
+    alert_df: pd.DataFrame,
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    alert_col: str = "alert_episode_flag",
+    target_col: str = "target",
+    interval_minutes: int = 5,
+) -> pd.DataFrame:
+    """
+    Build canonical alert evaluation dataframe by merging scored rows
+    with episode-level alerts.
+    """
+    required_scored = {patient_col, time_col, target_col}
+    required_alert = {patient_col, time_col, alert_col}
+
+    missing_scored = required_scored - set(scored_df.columns)
+    missing_alert = required_alert - set(alert_df.columns)
+
+    if missing_scored:
+        raise ValueError(f"scored_df missing required columns: {missing_scored}")
+    if missing_alert:
+        raise ValueError(f"alert_df missing required columns: {missing_alert}")
+
+    eval_df = scored_df.copy()
+    eval_df[time_col] = pd.to_datetime(eval_df[time_col])
+
+    alert_slice = alert_df[[patient_col, time_col, alert_col]].copy()
+    alert_slice[time_col] = pd.to_datetime(alert_slice[time_col])
+
+    eval_df = eval_df.merge(
+        alert_slice,
+        on=[patient_col, time_col],
+        how="left",
+    )
+
+    eval_df[alert_col] = eval_df[alert_col].fillna(0).astype(int)
+    eval_df["row_hours"] = interval_minutes / 60.0
+
+    return eval_df
+
+
+def summarize_alert_burden(
+    eval_df: pd.DataFrame,
+    patient_col: str = "patient_id",
+    alert_col: str = "alert_episode_flag",
+) -> pd.DataFrame:
+    """
+    Per-patient alert burden summary.
+    """
+    required_cols = {patient_col, alert_col, "row_hours"}
+    missing = required_cols - set(eval_df.columns)
+    if missing:
+        raise ValueError(f"eval_df missing required columns: {missing}")
+
+    patient_summary = (
+        eval_df.groupby(patient_col, as_index=False)
+        .agg(
+            n_rows=("row_hours", "size"),
+            patient_hours=("row_hours", "sum"),
+            alert_episodes=(alert_col, "sum"),
+        )
+    )
+
+    patient_summary["alerts_per_patient_hour"] = np.where(
+        patient_summary["patient_hours"] > 0,
+        patient_summary["alert_episodes"] / patient_summary["patient_hours"],
+        np.nan,
+    )
+
+    return patient_summary.sort_values(
+        "alerts_per_patient_hour", ascending=False
+    ).reset_index(drop=True)
+
+
+def summarize_false_alert_episodes(
+    eval_df: pd.DataFrame,
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    alert_col: str = "alert_episode_flag",
+    target_col: str = "target",
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Evaluate alert episodes as true vs false using forward-looking target.
+    target == 1 at alert time => true/actionable alert
+    target == 0 at alert time => false alert
+    """
+    required_cols = {patient_col, time_col, alert_col, target_col}
+    missing = required_cols - set(eval_df.columns)
+    if missing:
+        raise ValueError(f"eval_df missing required columns: {missing}")
+
+    alert_events_df = (
+        eval_df.loc[eval_df[alert_col] == 1, [patient_col, time_col, alert_col, target_col]]
+        .copy()
+        .sort_values([patient_col, time_col])
+        .reset_index(drop=True)
+    )
+
+    if alert_events_df.empty:
+        summary_df = pd.DataFrame([{
+            "total_alert_episodes": 0,
+            "true_alert_episodes": 0,
+            "false_alert_episodes": 0,
+            "false_alert_episode_rate": np.nan,
+            "true_alert_episode_rate": np.nan,
+        }])
+        return alert_events_df, summary_df
+
+    alert_events_df["is_true_alert"] = (alert_events_df[target_col] == 1).astype(int)
+    alert_events_df["is_false_alert"] = (alert_events_df[target_col] == 0).astype(int)
+
+    total_alerts = int(alert_events_df.shape[0])
+    true_alerts = int(alert_events_df["is_true_alert"].sum())
+    false_alerts = int(alert_events_df["is_false_alert"].sum())
+
+    summary_df = pd.DataFrame([{
+        "total_alert_episodes": total_alerts,
+        "true_alert_episodes": true_alerts,
+        "false_alert_episodes": false_alerts,
+        "false_alert_episode_rate": false_alerts / total_alerts if total_alerts > 0 else np.nan,
+        "true_alert_episode_rate": true_alerts / total_alerts if total_alerts > 0 else np.nan,
+    }])
+
+    return alert_events_df, summary_df
+
+
+def compute_alert_burden_outputs(
+    scored_df: pd.DataFrame,
+    alert_df: pd.DataFrame,
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    alert_col: str = "alert_episode_flag",
+    target_col: str = "target",
+    interval_minutes: int = 5,
+):
+    """
+    One-stop wrapper for alert burden and false alert episode evaluation.
+    """
+    eval_df = build_alert_episode_evaluation_df(
+        scored_df=scored_df,
+        alert_df=alert_df,
+        patient_col=patient_col,
+        time_col=time_col,
+        alert_col=alert_col,
+        target_col=target_col,
+        interval_minutes=interval_minutes,
+    )
+
+    patient_alert_burden_df = summarize_alert_burden(
+        eval_df=eval_df,
+        patient_col=patient_col,
+        alert_col=alert_col,
+    )
+
+    alert_events_df, false_alert_summary_df = summarize_false_alert_episodes(
+        eval_df=eval_df,
+        patient_col=patient_col,
+        time_col=time_col,
+        alert_col=alert_col,
+        target_col=target_col,
+    )
+
+    return eval_df, patient_alert_burden_df, alert_events_df, false_alert_summary_df
