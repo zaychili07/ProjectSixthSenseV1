@@ -236,40 +236,22 @@ def interpret_change(signal, delta):
 
 
 def build_deterioration_table(det_summary):
-    det_df = pd.DataFrame({
-        "Signal": ["SpO2", "Resp Rate", "SBP", "Heart Rate", "Temp"],
-        "Start": [
-            round(det_summary.get("spo2_start", 0), 2),
-            round(det_summary.get("resp_rate_start", 0), 2),
-            round(det_summary.get("sbp_start", 0), 2),
-            round(det_summary.get("heart_rate_start", 0), 2),
-            round(det_summary.get("temperature_start", 0), 2),
-        ],
-        "End": [
-            round(det_summary.get("spo2_end", 0), 2),
-            round(det_summary.get("resp_rate_end", 0), 2),
-            round(det_summary.get("sbp_end", 0), 2),
-            round(det_summary.get("heart_rate_end", 0), 2),
-            round(det_summary.get("temperature_end", 0), 2),
-        ],
-        "Total Change": [
-            round(det_summary.get("spo2_delta_total", 0), 2),
-            round(det_summary.get("resp_rate_delta_total", 0), 2),
-            round(det_summary.get("sbp_delta_total", 0), 2),
-            round(det_summary.get("heart_rate_delta_total", 0), 2),
-            round(det_summary.get("temperature_delta_total", 0), 2),
-        ]
-    })
+    """
+    Convert deterioration summary output into a display-ready DataFrame.
 
-    det_df["Clinical Direction"] = [
-        interpret_change("SpO2", det_df.loc[0, "Total Change"]),
-        interpret_change("Resp Rate", det_df.loc[1, "Total Change"]),
-        interpret_change("SBP", det_df.loc[2, "Total Change"]),
-        interpret_change("Heart Rate", det_df.loc[3, "Total Change"]),
-        interpret_change("Temp", det_df.loc[4, "Total Change"]),
-    ]
+    Expected input:
+        det_summary = list[dict]
+    """
+    if det_summary is None:
+        return pd.DataFrame()
 
-    return det_df
+    if isinstance(det_summary, list):
+        return pd.DataFrame(det_summary)
+
+    raise ValueError(
+        "build_deterioration_table expected det_summary as list[dict]. "
+        f"Got type: {type(det_summary)}"
+    )
 
 
 def style_direction(val):
