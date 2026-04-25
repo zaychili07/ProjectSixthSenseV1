@@ -36,25 +36,25 @@ to generate **forward-looking risk scores and low-noise alert episodes**.
 
 ## 📈 Event-Level Detection
 
-![Event Detection](outputs/event_detection_summary.png)
+![Event Detection](outputs/figures/event_detection_summary.png)
 
 ---
 
 ## ⏱️ Lead-Time Distribution
 
-![Lead Time](outputs/leadtime_distribution.png)
+![Lead Time](outputs/figures/leadtime_distribution.png)
 
 ---
 
 ## 🚨 Alert Burden
 
-![Alert Burden](outputs/alert_burden_distribution.png)
+![Alert Burden](outputs/figures/alert_burden_distribution.png)
 
 ---
 
 ## 🔝 High-Burden Patients
 
-![Top Burden](outputs/top_alert_burden_patients.png)
+![Top Burden](outputs/figures/top_alert_burden_patients.png)
 
 ---
 
