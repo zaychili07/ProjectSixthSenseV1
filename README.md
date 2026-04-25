@@ -209,7 +209,8 @@ BIRE demonstrates that incorporating temporal dynamics + persistence-based alert
 
 This positions the system as a strong foundation for next-generation patient monitoring systems.
 
-BIRE Evaluation Results
+## BIRE Evaluation Results
+
 BIRE was evaluated as a forward-looking patient deterioration risk engine using time-series vital signs and episode-level alerting. The system does not simply flag isolated threshold crossings; it converts model risk scores into alert episodes and evaluates whether those alerts occur before deterioration events.
 
 Key Evaluation Metrics
