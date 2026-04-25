@@ -358,7 +358,7 @@ Optimal settings require **clinical calibration and validation**.
 Before real-world use, BIRE would require:
 
 * Prospective validation in clinical settings
-* Integration with EHR / monitoring systems
+* Integration with Electronic Health Records (EHR) / monitoring systems
 * Real-time data streaming support
 * Continuous monitoring for model drift
 
