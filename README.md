@@ -62,7 +62,85 @@ to generate **forward-looking risk scores and low-noise alert episodes**.
 
 ---
 
-## 🧠 Key Insight
+## 🏥 Why This Matters Clinically
+
+In real clinical settings, deterioration rarely happens suddenly—it develops gradually through subtle physiological changes. Traditional monitoring systems rely on fixed thresholds (e.g., SpO₂ < 90), which often trigger **after a patient has already begun to decline**.
+
+This leads to two major problems:
+
+* ⚠️ **Delayed intervention** — clinicians react after deterioration has already occurred
+* 🔊 **Alert fatigue** — excessive false alarms reduce trust in monitoring systems
+
+---
+
+### 🧠 How BIRE Improves This
+
+BIRE reframes monitoring from **reactive thresholds → proactive intelligence**.
+
+Instead of asking:
+
+> “Is this value abnormal right now?”
+
+BIRE asks:
+
+> “Is this patient *trending toward deterioration*?”
+
+---
+
+### ⏱️ Earlier Detection
+
+By modeling **temporal dynamics (trends, instability, rate-of-change)**, BIRE identifies deterioration **before clinical thresholds are crossed**, providing meaningful lead time for intervention.
+
+---
+
+### 🚨 Reduced Alert Fatigue
+
+BIRE uses **persistence-based alerting**, meaning alerts only trigger when elevated risk is sustained—not from isolated spikes.
+
+This results in:
+
+* fewer false positives
+* more trustworthy alerts
+* better clinician adoption
+
+---
+
+### ⚖️ Balanced Decision Support
+
+BIRE explicitly evaluates:
+
+* ✔️ Detection of true deterioration events
+* ✔️ Lead time before events
+* ✔️ Alert burden (alerts per patient-hour)
+* ✔️ False alert rate
+
+This ensures the system is not just accurate—but **operationally usable**.
+
+---
+
+###  Real-World Impact
+
+If deployed in a clinical environment, a system like BIRE could:
+
+* Enable **earlier interventions** (e.g., oxygen therapy, fluids, escalation of care)
+* Reduce **ICU transfers and adverse events**
+* Improve **workflow efficiency** by minimizing unnecessary alerts
+* Provide clinicians with **interpretable, actionable signals**
+
+---
+
+###  Key Takeaway
+
+BIRE shifts patient monitoring from:
+
+> **“Detecting when a patient is already deteriorating”**
+
+to
+
+> **“Predicting when a patient is about to deteriorate—and acting in time.”**
+
+
+##  Key Insight
 
 > Early deterioration is not defined by a single abnormal reading
 > but by **how physiology changes over time**.
