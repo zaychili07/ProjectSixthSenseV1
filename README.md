@@ -7,7 +7,7 @@ using **temporal dynamics, not static thresholds**.
 
 ---
 
-## 🚀 Overview
+##  Overview
 
 BIRE is a clinical ML system designed to detect **early warning signals of patient decline before they become clinically obvious**.
 
@@ -23,7 +23,7 @@ to generate **forward-looking risk scores and low-noise alert episodes**.
 
 ---
 
-## 📊 Results Snapshot
+##  Results Snapshot
 
 | Metric               |               Value |
 | -------------------- | ------------------: |
@@ -34,25 +34,25 @@ to generate **forward-looking risk scores and low-noise alert episodes**.
 
 ---
 
-## 📈 Event-Level Detection
+##  Event-Level Detection
 
 ![Event Detection](outputs/figures/event_detection_summary.png)
 
 ---
 
-## ⏱️ Lead-Time Distribution
+##  Lead-Time Distribution
 
 ![Lead Time](outputs/figures/leadtime_distribution.png)
 
 ---
 
-## 🚨 Alert Burden
+##  Alert Burden
 
 ![Alert Burden](outputs/figures/alert_burden_distribution.png)
 
 ---
 
-## 🔝 High-Burden Patients
+##  High-Burden Patients
 
 ![Top Burden](outputs/figures/top_alert_burden_patients.png)
 
@@ -67,23 +67,23 @@ BIRE captures this by transforming raw vitals into **temporal signals of instabi
 
 ---
 
-## 🎯 What Makes BIRE Different
+##  What Makes BIRE Different
 
-* 🔄 **Temporal Awareness** — learns change over time, not just abnormal values
-* 🔮 **Forward Prediction** — predicts deterioration within a 60-minute window
-* 🚨 **Persistence-Based Alerting** — reduces false alarms via sustained risk
-* 🧠 **Interpretable Modeling** — explainable baseline with logistic regression
-* 🏥 **Clinical Framing** — built as a decision-support system
+*  **Temporal Awareness** — learns change over time, not just abnormal values
+*  **Forward Prediction** — predicts deterioration within a 60-minute window
+*  **Persistence-Based Alerting** — reduces false alarms via sustained risk
+*  **Interpretable Modeling** — explainable baseline with logistic regression
+*  **Clinical Framing** — built as a decision-support system
 
 ---
 
-## ⚙️ Pipeline Architecture
+##  Pipeline Architecture
 
 Raw Data → Temporal Alignment → Feature Engineering → Target Construction → Modeling → Alerting → Evaluation
 
 ---
 
-## 🧠 Core System Design
+##  Core System Design
 
 ### 1. Data Processing
 
@@ -108,7 +108,7 @@ All features are **leakage-safe**.
 
 ---
 
-## 🎯 Target Construction
+##  Target Construction
 
 Two labels:
 
@@ -130,7 +130,7 @@ Forward-looking deterioration within 60 minutes using:
 
 ---
 
-## 🤖 Modeling
+##  Modeling
 
 * Logistic Regression baseline
 * Patient-level time-aware split
@@ -138,7 +138,7 @@ Forward-looking deterioration within 60 minutes using:
 
 ---
 
-## 🚨 Alerting Framework
+##  Alerting Framework
 
 * Threshold-based filtering
 * Persistence requirement
@@ -150,7 +150,7 @@ This produces:
 
 ---
 
-## ⚡ Operational Performance
+##  Operational Performance
 
 * Alerts triggered: **2**
 * Patients alerted: **1**
@@ -164,7 +164,7 @@ This produces:
 
 ---
 
-## 📊 Evaluation Philosophy
+##  Evaluation Philosophy
 
 BIRE is evaluated beyond standard metrics:
 
@@ -177,7 +177,7 @@ This makes it closer to a **real clinical system**.
 
 ---
 
-## 🧪 Strengths
+##  Strengths
 
 * ✅ Leakage-safe pipeline
 * ✅ Temporal modeling
@@ -187,7 +187,7 @@ This makes it closer to a **real clinical system**.
 
 ---
 
-## ⚠️ Limitations
+##  Limitations
 
 * Small mock dataset
 * Requires larger-scale validation
@@ -195,7 +195,7 @@ This makes it closer to a **real clinical system**.
 
 ---
 
-## 🚀 Future Work
+##  Future Work
 
 * XGBoost / advanced models
 * Threshold optimization
@@ -205,7 +205,7 @@ This makes it closer to a **real clinical system**.
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 src/bire/
 ├── data/
@@ -237,7 +237,7 @@ python src/bire/pipeline/main_pipeline.py
 
 ---
 
-## 🧠 Final Takeaway
+##  Final Takeaway
 
 BIRE is not just a classifier.
 
