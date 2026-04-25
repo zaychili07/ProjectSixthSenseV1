@@ -68,12 +68,12 @@ In real clinical settings, deterioration rarely happens suddenly—it develops g
 
 This leads to two major problems:
 
-* ⚠️ **Delayed intervention** — clinicians react after deterioration has already occurred
-* 🔊 **Alert fatigue** — excessive false alarms reduce trust in monitoring systems
+*  **Delayed intervention** — clinicians react after deterioration has already occurred
+*  **Alert fatigue** — excessive false alarms reduce trust in monitoring systems
 
 ---
 
-### 🧠 How BIRE Improves This
+###  How BIRE Improves This
 
 BIRE reframes monitoring from **reactive thresholds → proactive intelligence**.
 
