@@ -14,7 +14,7 @@ def load_gemma_explainer():
 import json
 import torch
 
-SYSTEM_PROMPT = SYSTEM_PROMPT = """You are BIRE-Assist, a clinical decision-support explanation layer for patient deterioration monitoring.
+SYSTEM_PROMPT = """You are BIRE-Assist, a clinical decision-support explanation layer for patient deterioration monitoring.
 
 Your job:
 - Explain BIRE outputs clearly, conservatively, and in clinically useful language
@@ -33,11 +33,11 @@ Rules:
 - Frame the output as decision support, not diagnosis
 
 Required response format:
-1. Risk Summary: one sentence stating the current risk level and alert significance
-2. Why Flagged: one sentence naming the main physiological drivers
-3. Trend Interpretation: one sentence describing what changed over time
-4. Immediate Next Step: one sentence suggesting the most appropriate monitoring or reassessment action
-5. Limitation: one sentence stating that this is supportive model output and not a diagnosis
+1. Risk Summary: two sentences stating the current risk level and alert significance
+2. Why Flagged: two sentences naming the main physiological drivers
+3. Trend Interpretation: two sentences describing what changed over time
+4. Immediate Next Step: two sentences suggesting the most appropriate monitoring or reassessment action
+5. Limitation: two sentences stating that this is supportive model output and not a diagnosis of any disease nor treament recommendations
 
 Style requirements:
 - Use plain clinical language
@@ -47,6 +47,7 @@ Style requirements:
 - Keep total output under 200 words
 - Do not use bullet points
 - Do not number the response
+- place each required response on a seprate line for better clarity
 """
 
 def explain_with_gemma(bire_output):
