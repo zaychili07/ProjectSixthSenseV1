@@ -87,7 +87,7 @@ BIRE asks:
 
 ---
 
-### ⏱️ Earlier Detection
+###  Earlier Detection
 
 By modeling **temporal dynamics (trends, instability, rate-of-change)**, BIRE identifies deterioration **before clinical thresholds are crossed**, providing meaningful lead time for intervention.
 
@@ -258,6 +258,112 @@ BIRE is evaluated beyond standard metrics:
 This makes it closer to a **real clinical system**.
 
 ---
+## ⚖️ Threshold Optimization & Tradeoff Analysis
+
+A critical component of BIRE is selecting an appropriate **alert threshold** that balances early detection with operational feasibility.
+
+Rather than relying on a single fixed threshold, BIRE is designed to evaluate performance across multiple thresholds to understand tradeoffs between:
+
+* **Sensitivity (detection rate)**
+* **Lead time (early warning)**
+* **Alert burden (alerts per patient-hour)**
+* **False alert rate**
+
+---
+
+###  The Core Tradeoff
+
+Lower thresholds:
+
+* ↑ Higher detection rate
+* ↑ Earlier alerts (longer lead time)
+* ↑ More alerts (risk of alert fatigue)
+
+Higher thresholds:
+
+* ↓ Fewer alerts
+* ↓ Lower false alert rate
+* ↓ Potentially missed or delayed detections
+
+---
+
+### 📊 Threshold Behavior Summary
+
+| Threshold | Detection Rate | Median Lead Time | Alerts / hr | False Alert Rate |
+| --------- | -------------- | ---------------- | ----------- | ---------------- |
+| 0.15      | High           | Very Early       | High        | Higher           |
+| 0.25      | Balanced       | Early            | Moderate    | Moderate         |
+| 0.30      | Selective      | Slightly Reduced | Low         | Low              |
+
+> *Values shown are illustrative; actual values depend on dataset and tuning.*
+
+---
+
+### 🧠 Observations
+
+* BIRE demonstrates strong performance even at **higher thresholds**, maintaining meaningful detection while reducing alert burden
+* Alert episodes become more **clinically targeted** as threshold increases
+* There is a clear **nonlinear tradeoff** between lead time and alert frequency
+
+---
+
+###  Design Philosophy
+
+BIRE does not aim to maximize a single metric.
+
+Instead, it seeks an **operating point** that:
+
+* Provides **sufficient early warning**
+* Maintains **low alert burden**
+* Minimizes **false positives**
+* Aligns with **clinical workflow constraints**
+
+---
+
+###  Clinical Perspective
+
+In real-world deployment, threshold selection would be:
+
+* Tuned per hospital or unit
+* Adjusted based on:
+
+  * patient acuity
+  * staffing levels
+  * acceptable alert volume
+
+For example:
+
+* ICU → lower threshold (higher sensitivity)
+* General ward → higher threshold (lower alert burden)
+
+---
+
+###  Key Insight
+
+> The best model is not the one with the highest accuracy—
+> it is the one that operates at the **right point on the tradeoff curve**.
+
+---
+
+###  Future Direction
+
+* Automated threshold calibration
+* Patient-specific thresholds
+* Dynamic thresholds based on real-time risk trends
+* Integration with reinforcement or adaptive learning systems
+
+---
+
+## 📌 Takeaway
+
+Threshold optimization transforms BIRE from:
+
+> a predictive model
+
+into:
+
+> a **tunable clinical system** capable of adapting to real-world constraints.
+
 
 ##  Strengths
 
