@@ -23,6 +23,10 @@ to generate **forward-looking risk scores and low-noise alert episodes**.
 
 ---
 
+##  System Architecture
+
+![System Diagram](outputs/system_diagram.png)
+
 ##  Results Snapshot
 
 | Metric               |               Value |
