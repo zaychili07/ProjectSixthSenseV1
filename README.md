@@ -269,11 +269,122 @@ This makes it closer to a **real clinical system**.
 
 ---
 
-##  Limitations
+## ⚠️ System Limitations & Safety Considerations
 
-* Small mock dataset
-* Requires larger-scale validation
-* Threshold tuning needed for deployment
+While BIRE demonstrates strong performance in early detection and alert efficiency, it is important to recognize key limitations and safety considerations before any real-world deployment.
+
+---
+
+### ⚠️ Data Limitations
+
+* The current evaluation is based on a **mock / limited dataset**
+* Physiological variability in real populations is significantly higher
+* Model performance may not generalize without:
+
+  * larger datasets
+  * diverse patient populations
+  * real-world clinical noise
+
+---
+
+###  Model Limitations
+
+* The current system uses a **logistic regression baseline**
+* While interpretable, it may not capture:
+
+  * complex nonlinear interactions
+  * rare event patterns
+* More advanced models (e.g., XGBoost) may improve performance but reduce interpretability
+
+---
+
+###  Temporal Assumptions
+
+* Fixed 5-minute sampling may not reflect:
+
+  * irregular clinical measurements
+  * missing data patterns in real settings
+* Lead-time estimates depend on:
+
+  * data resolution
+  * monitoring frequency
+
+---
+
+###  Alerting Tradeoffs
+
+BIRE explicitly balances:
+
+* sensitivity (catching deterioration early)
+* vs
+* specificity (avoiding unnecessary alerts)
+
+However:
+
+* Lower thresholds → more alerts (risk of alert fatigue)
+* Higher thresholds → missed early detections
+
+Optimal settings require **clinical calibration and validation**.
+
+---
+
+###  Clinical Safety Considerations
+
+* BIRE is designed as a **decision-support tool**, not a replacement for clinical judgment
+* Alerts should be:
+
+  * reviewed by clinicians
+  * integrated into existing workflows
+* Incorrect alerts could lead to:
+
+  * unnecessary interventions
+  * delayed care if over-trusted
+
+---
+
+### 🔒 Data Integrity & Leakage Prevention
+
+* Strict temporal alignment and feature engineering were used to prevent data leakage
+* However, real-world pipelines must also address:
+
+  * delayed data availability
+  * sensor errors
+  * missing or corrupted inputs
+
+---
+
+###  Deployment Considerations
+
+Before real-world use, BIRE would require:
+
+* Prospective validation in clinical settings
+* Integration with EHR / monitoring systems
+* Real-time data streaming support
+* Continuous monitoring for model drift
+
+---
+
+###  Ethical Considerations
+
+* Patient data privacy must be preserved (HIPAA compliance)
+* Bias in training data could affect:
+
+  * underserved populations
+  * clinical equity
+* Transparent reporting and validation are essential
+
+---
+
+##  Final Perspective
+
+BIRE demonstrates the **potential** of temporally-aware machine learning for early deterioration detection, but responsible deployment requires:
+
+> rigorous validation, careful calibration, and integration with clinical expertise
+
+---
+
+**In short:**
+BIRE is not just a model—it is a foundation for a **safe, interpretable, and clinically aligned decision-support system**.
 
 ---
 
