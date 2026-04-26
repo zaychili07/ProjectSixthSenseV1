@@ -626,11 +626,12 @@ def add_alert_episode_flags(
         >= persistence_steps
     )
 
-    previous_alert = (
-        out.groupby(patient_col)["alert_persistent"]
-        .shift(1)
-        .fillna(False)
-    )
+   previous_alert = (
+    out.groupby(patient_col)["alert_persistent"]
+    .shift(1)
+)
+
+previous_alert = previous_alert.fillna(False).astype(bool)
 
     out["alert_episode_flag"] = (
         out["alert_persistent"] & ~previous_alert
