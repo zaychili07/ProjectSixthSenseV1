@@ -487,10 +487,10 @@ def summarize_alert_burden(
     missing = required_cols - set(eval_df.columns)
     if missing:
         raise ValueError(f"eval_df missing required columns: {missing}")
-
-    patient_summary = (
-        eval_df.groupby(patient_col, as_index=False)
-        .agg(
+        
+        patient_summary = (
+            eval_df.groupby(patient_col, as_index=False)
+            .agg(
             n_rows=("row_hours", "size"),
             patient_hours=("row_hours", "sum"),
             alert_episodes=(alert_col, "sum"),
