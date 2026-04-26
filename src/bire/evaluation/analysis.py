@@ -781,3 +781,66 @@ def run_threshold_sweep(
         )
 
     return pd.DataFrame(rows)
+
+def add_adaptive_patient_alerts(
+    df: pd.DataFrame,
+    base_threshold: float = 0.992,
+    patient_quantile: float = 0.90,
+    prob_col: str = "pred_proba",
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    persistence_steps: int = 3,
+) -> pd.DataFrame:
+    """
+    Patient-adaptive alerting.
+
+    Uses the larger of:
+    1. global base threshold
+    2. patient-specific risk quantile
+
+    This prevents patients with chronically high risk from repeatedly alerting
+    unless they exceed their own baseline risk pattern.
+    """
+
+    out = df.copy()
+    out = out.sort_values([patient_col, time_col])
+
+    patient_thresholds = (
+        out.groupby(patient_col)[prob_col]
+        .quantile(patient_quantile)
+        .rename("patient_adaptive_threshold")
+        .reset_index()
+    )
+
+    out = out.merge(patient_thresholds, on=patient_col, how="left")
+
+    out["effective_threshold"] = out[
+        ["patient_adaptive_threshold"]
+    ].max(axis=1)
+
+    out["effective_threshold"] = out["effective_threshold"].clip(
+        lower=base_threshold
+    )
+
+    out["alert_raw"] = out[prob_col] >= out["effective_threshold"]
+
+    out["alert_persistent"] = (
+        out.groupby(patient_col)["alert_raw"]
+        .rolling(window=persistence_steps, min_periods=persistence_steps)
+        .sum()
+        .reset_index(level=0, drop=True)
+        >= persistence_steps
+    )
+
+    previous_alert = (
+        out.groupby(patient_col)["alert_persistent"]
+        .shift(1)
+    )
+
+    previous_alert = previous_alert.fillna(False).astype(bool)
+
+    out["alert_episode_flag"] = (
+        out["alert_persistent"] & ~previous_alert
+    ).astype(int)
+
+    return out
