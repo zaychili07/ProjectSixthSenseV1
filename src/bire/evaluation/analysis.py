@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+
 def compute_lead_time_summary(
     df: pd.DataFrame,
     patient_col: str = "patient_id",
@@ -596,3 +597,186 @@ def compute_alert_burden_outputs(
     )
 
     return eval_df, patient_alert_burden_df, alert_events_df, false_alert_summary_df
+
+# This is going to change
+def add_alert_episode_flags(
+    df: pd.DataFrame,
+    threshold: float,
+    prob_col: str = "pred_proba",
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    persistence_steps: int = 2,
+) -> pd.DataFrame:
+    """
+    Converts risk probabilities into episode-based alerts.
+
+    An alert episode starts only after risk stays above threshold
+    for `persistence_steps` consecutive rows.
+    """
+    out = df.copy()
+    out = out.sort_values([patient_col, time_col])
+
+    out["alert_raw"] = out[prob_col] >= threshold
+
+    out["alert_persistent"] = (
+        out.groupby(patient_col)["alert_raw"]
+        .rolling(window=persistence_steps, min_periods=persistence_steps)
+        .sum()
+        .reset_index(level=0, drop=True)
+        >= persistence_steps
+    )
+
+    previous_alert = (
+        out.groupby(patient_col)["alert_persistent"]
+        .shift(1)
+        .fillna(False)
+    )
+
+    out["alert_episode_flag"] = (
+        out["alert_persistent"] & ~previous_alert
+    ).astype(int)
+
+    return out
+
+def run_threshold_sweep(
+    scored_df: pd.DataFrame,
+    thresholds: list[float],
+    event_col: str = "event_now",
+    target_col: str = "target",
+    prob_col: str = "pred_proba",
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    interval_minutes: int = 5,
+    prediction_horizon_minutes: int = 60,
+    persistence_steps: int = 2,
+) -> pd.DataFrame:
+    """
+    Runs threshold sweep for BIRE alert tuning.
+
+    Compares:
+    - detection rate
+    - median lead time
+    - alerts per patient-hour
+    - false alert episode rate
+    - missed events
+    """
+
+    rows = []
+
+    if event_col not in scored_df.columns:
+        event_col = target_col
+
+    for threshold in thresholds:
+        temp_df = add_alert_episode_flags(
+            scored_df,
+            threshold=threshold,
+            prob_col=prob_col,
+            patient_col=patient_col,
+            time_col=time_col,
+            persistence_steps=persistence_steps,
+        )
+
+        total_patients = temp_df[patient_col].nunique()
+        total_rows = len(temp_df)
+
+        total_patient_hours = (
+            total_rows * interval_minutes
+        ) / 60
+
+        total_alerts = temp_df["alert_episode_flag"].sum()
+
+        alerts_per_patient_hour = (
+            total_alerts / total_patient_hours
+            if total_patient_hours > 0
+            else np.nan
+        )
+
+        event_rows = temp_df[temp_df[event_col] == 1].copy()
+        total_events = len(event_rows)
+
+        detected_events = 0
+        lead_times = []
+
+        for _, event in event_rows.iterrows():
+            pid = event[patient_col]
+            event_time = event[time_col]
+
+            lookback_start = event_time - pd.Timedelta(
+                minutes=prediction_horizon_minutes
+            )
+
+            prior_alerts = temp_df[
+                (temp_df[patient_col] == pid)
+                & (temp_df[time_col] >= lookback_start)
+                & (temp_df[time_col] < event_time)
+                & (temp_df["alert_episode_flag"] == 1)
+            ]
+
+            if len(prior_alerts) > 0:
+                detected_events += 1
+
+                first_alert_time = prior_alerts[time_col].min()
+                lead_time = (
+                    event_time - first_alert_time
+                ).total_seconds() / 60
+
+                lead_times.append(lead_time)
+
+        missed_events = total_events - detected_events
+
+        detection_rate = (
+            detected_events / total_events
+            if total_events > 0
+            else np.nan
+        )
+
+        median_lead_time = (
+            np.median(lead_times)
+            if len(lead_times) > 0
+            else np.nan
+        )
+
+        false_alerts = 0
+
+        alert_rows = temp_df[temp_df["alert_episode_flag"] == 1].copy()
+
+        for _, alert in alert_rows.iterrows():
+            pid = alert[patient_col]
+            alert_time = alert[time_col]
+
+            future_window_end = alert_time + pd.Timedelta(
+                minutes=prediction_horizon_minutes
+            )
+
+            future_events = temp_df[
+                (temp_df[patient_col] == pid)
+                & (temp_df[time_col] > alert_time)
+                & (temp_df[time_col] <= future_window_end)
+                & (temp_df[event_col] == 1)
+            ]
+
+            if len(future_events) == 0:
+                false_alerts += 1
+
+        false_alert_rate = (
+            false_alerts / total_alerts
+            if total_alerts > 0
+            else np.nan
+        )
+
+        rows.append(
+            {
+                "threshold": threshold,
+                "total_events": total_events,
+                "detected_events": detected_events,
+                "missed_events": missed_events,
+                "detection_rate": detection_rate,
+                "median_lead_time_min": median_lead_time,
+                "total_alert_episodes": total_alerts,
+                "alerts_per_patient_hour": alerts_per_patient_hour,
+                "false_alert_episodes": false_alerts,
+                "false_alert_rate": false_alert_rate,
+            }
+        )
+
+    return pd.DataFrame(rows)
