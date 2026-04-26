@@ -607,12 +607,7 @@ def add_alert_episode_flags(
     time_col: str = "timestamp",
     persistence_steps: int = 2,
 ) -> pd.DataFrame:
-    """
-    Converts risk probabilities into episode-based alerts.
 
-    An alert episode starts only after risk stays above threshold
-    for `persistence_steps` consecutive rows.
-    """
     out = df.copy()
     out = out.sort_values([patient_col, time_col])
 
@@ -626,12 +621,12 @@ def add_alert_episode_flags(
         >= persistence_steps
     )
 
-   previous_alert = (
-    out.groupby(patient_col)["alert_persistent"]
-    .shift(1)
-)
+    previous_alert = (
+        out.groupby(patient_col)["alert_persistent"]
+        .shift(1)
+    )
 
-previous_alert = previous_alert.fillna(False).astype(bool)
+    previous_alert = previous_alert.fillna(False).astype(bool)
 
     out["alert_episode_flag"] = (
         out["alert_persistent"] & ~previous_alert
