@@ -1257,11 +1257,11 @@ def apply_gss_with_delta_override(
     escalation_reason_col="gss_v21_escalation_reason",
     risk_delta=0.013,
     escalation_threshold=0.995,
-    spo2_delta_drop=-1.0,
-    sbp_delta_drop=-5.0,
-    resp_rate_delta_rise=2.0,
-    heart_rate_delta_rise=5.0,
-    temp_delta_worsen=0.3,
+   spo2_delta_drop = -0.5,
+    sbp_delta_drop = -2.0,
+    resp_rate_delta_rise = 1.0,
+    heart_rate_delta_rise = 2.0,
+    temp_delta_worsen = 0.2,
 ):
     """
     GSS v2.1 — Delta-Based Override (Temporal Signal Aware)
