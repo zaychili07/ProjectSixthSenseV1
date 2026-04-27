@@ -25,7 +25,7 @@ to generate **forward-looking risk scores and low-noise alert episodes**.
 
 ##  System Architecture
 
-![System Diagram](assets/BIRE_system_architecture.png)
+DIAGRAM COMMING SOON!!!
 
 ##  Results Snapshot
 
@@ -41,7 +41,7 @@ to generate **forward-looking risk scores and low-noise alert episodes**.
 ---
 ##  BIRE Alerting Architecture
 
-![BIRE Architecture](assets/BIRE_Alerting_Architecture.png)
+DIAGRAM COMMING SOON!!!
 
 BIRE separates risk prediction from alert decision-making, using the Gateway Suppression System (GSS) to ensure alerts are context-aware and clinically meaningful.
 
