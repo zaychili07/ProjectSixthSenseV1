@@ -1251,10 +1251,10 @@ def apply_gss_with_delta_override(
     patient_col="patient_id",
     time_col="timestamp",
     event_col="event_now",
-    gss_alert_col="gss_v21_alert",
-    suppressed_col="gss_v21_suppressed",
-    escalation_col="gss_v21_escalation",
-    escalation_reason_col="gss_v21_escalation_reason",
+    gss_alert_col="gss_v22_alert",
+    suppressed_col="gss_v22_suppressed",
+    escalation_col="gss_v22_escalation",
+    escalation_reason_col="gss_v22_escalation_reason",
     risk_delta=0.013,
     escalation_threshold=0.995,
     spo2_delta_drop=-0.5,
@@ -1262,7 +1262,19 @@ def apply_gss_with_delta_override(
     resp_rate_delta_rise=1.0,
     heart_rate_delta_rise=2.0,
     temp_delta_worsen=0.2,
+    min_delta_signals=2,
 ):
+    """
+    GSS v2.2 — Delta-Based Override with Multi-Signal Confirmation.
+
+    Fires when:
+    - first alert occurs
+    - risk meaningfully escalates
+    - escalation threshold is crossed
+    - at least min_delta_signals physiologic delta signals worsen
+    - event_now occurs as a fallback only
+    """
+
     import pandas as pd
 
     out = df.copy()
@@ -1278,6 +1290,19 @@ def apply_gss_with_delta_override(
     out[escalation_col] = False
     out[escalation_reason_col] = "no_alert"
 
+    delta_signal_names = [
+        "spo2_delta_drop",
+        "sbp_delta_drop",
+        "resp_rate_delta_rise",
+        "heart_rate_delta_rise",
+        "temp_delta_worsen",
+    ]
+
+    risk_signal_names = [
+        "risk_delta_break",
+        "escalation_threshold",
+    ]
+
     for patient_id, group in out.groupby(patient_col, sort=False):
         last_alert_risk = None
 
@@ -1292,6 +1317,7 @@ def apply_gss_with_delta_override(
 
             if last_alert_risk is None:
                 reasons.append("initial_alert")
+
             else:
                 if current_risk >= escalation_threshold:
                     reasons.append("escalation_threshold")
@@ -1323,19 +1349,24 @@ def apply_gss_with_delta_override(
                     if not reasons:
                         reasons.append("event_now_override")
 
-            real_signals = [r for r in reasons if r != "event_now_override"]
+            delta_signals = [r for r in reasons if r in delta_signal_names]
+            risk_signals = [r for r in reasons if r in risk_signal_names]
 
-                if (
-                    "initial_alert" in reasons
-                    or "risk_delta_break" in reasons
-                    or "escalation_threshold" in reasons
-                    or len(real_signals) >= 2
-):
+            should_fire = (
+                "initial_alert" in reasons
+                or len(risk_signals) > 0
+                or len(delta_signals) >= min_delta_signals
+            )
+
+            if should_fire:
                 out.at[idx, gss_alert_col] = True
                 out.at[idx, escalation_col] = True
-                out.at[idx, escalation_reason_col] = "+".join(
-                    real_signals if real_signals else ["initial_alert"]
-                )
+
+                if "initial_alert" in reasons:
+                    out.at[idx, escalation_reason_col] = "initial_alert"
+                else:
+                    out.at[idx, escalation_reason_col] = "+".join(risk_signals + delta_signals)
+
                 last_alert_risk = current_risk
 
             elif "event_now_override" in reasons:
