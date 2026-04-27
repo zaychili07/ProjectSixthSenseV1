@@ -1325,7 +1325,12 @@ def apply_gss_with_delta_override(
 
             real_signals = [r for r in reasons if r != "event_now_override"]
 
-            if real_signals or "initial_alert" in reasons:
+                if (
+                    "initial_alert" in reasons
+                    or "risk_delta_break" in reasons
+                    or "escalation_threshold" in reasons
+                    or len(real_signals) >= 2
+):
                 out.at[idx, gss_alert_col] = True
                 out.at[idx, escalation_col] = True
                 out.at[idx, escalation_reason_col] = "+".join(
