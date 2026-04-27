@@ -1013,3 +1013,34 @@ def compare_bire_alert_modes(
         })
 
     return pd.DataFrame(rows)
+
+def add_event_episode_flags(
+    df: pd.DataFrame,
+    event_col: str = "event_now",
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    output_col: str = "event_episode_flag",
+) -> pd.DataFrame:
+    """
+    Marks the start of each deterioration event episode.
+
+    Instead of counting every event row, this counts only 0 -> 1 transitions.
+    """
+    out = df.copy()
+    out[time_col] = pd.to_datetime(out[time_col])
+    out = out.sort_values([patient_col, time_col]).copy()
+
+    out[event_col] = out[event_col].fillna(0).astype(int)
+
+    previous_event = (
+        out.groupby(patient_col)[event_col]
+        .shift(1)
+        .fillna(0)
+        .astype(int)
+    )
+
+    out[output_col] = (
+        (out[event_col] == 1) & (previous_event == 0)
+    ).astype(int)
+
+    return out
