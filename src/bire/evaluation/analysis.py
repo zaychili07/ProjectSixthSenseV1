@@ -1296,89 +1296,84 @@ def apply_gss_with_delta_override(
     out[suppressed_col] = False
     out[escalation_col] = False
     out[escalation_reason_col] = "no_alert"
-
-        for patient_id, group in out.groupby(patient_col, sort=False):
-
+    
+    for patient_id, group in out.groupby(patient_col, sort=False):
         last_alert_risk = None
-
+        
         for idx in group.index:
-
             is_alert = bool(out.at[idx, alert_col])
-
+            
             if not is_alert:
                 continue
-
-            current_risk = out.at[idx, prob_col]
-            reasons = []
+                
+                current_risk = out.at[idx, prob_col]
+                reasons = []
 
             # =========================
             # 🔹 First alert
             # =========================
-            if last_alert_risk is None:
-                reasons.append("initial_alert")
+if last_alert_risk is None:
+    reasons.append("initial_alert")
 
-            else:
+else:
                 # =========================
                 # 🔹 Risk-based overrides
                 # =========================
-                if current_risk >= escalation_threshold:
-                    reasons.append("escalation_threshold")
-
-                if current_risk - last_alert_risk >= risk_delta:
-                    reasons.append("risk_delta_break")
+    if current_risk >= escalation_threshold:
+        reasons.append("escalation_threshold")
+        
+        if current_risk - last_alert_risk >= risk_delta:
+            reasons.append("risk_delta_break")
 
                 # =========================
                 # 🔹 Event override (FIXED INDENT)
                 # =========================
-                if event_col in out.columns and bool(out.at[idx, event_col]):
-                    if not reasons:
-                        reasons.append("event_now_override")
+            
+            if event_col in out.columns and bool(out.at[idx, event_col]):
+                if not reasons:
+                    reasons.append("event_now_override")
 
                 # =========================
                 # 🔹 Delta overrides
                 # =========================
-                if "spo2_delta" in out.columns:
-                    if out.at[idx, "spo2_delta"] <= spo2_delta_drop:
-                        reasons.append("spo2_delta_drop")
-
-                if "sbp_delta" in out.columns:
-                    if out.at[idx, "sbp_delta"] <= sbp_delta_drop:
-                        reasons.append("sbp_delta_drop")
-
+if "spo2_delta" in out.columns:
+    if out.at[idx, "spo2_delta"] <= spo2_delta_drop:
+        reasons.append("spo2_delta_drop")
+        
+        if "sbp_delta" in out.columns:
+            if out.at[idx, "sbp_delta"] <= sbp_delta_drop:
+                reasons.append("sbp_delta_drop")
+                
                 if "resp_rate_delta" in out.columns:
                     if out.at[idx, "resp_rate_delta"] >= resp_rate_delta_rise:
                         reasons.append("resp_rate_delta_rise")
-
-                if "heart_rate_delta" in out.columns:
-                    if out.at[idx, "heart_rate_delta"] >= heart_rate_delta_rise:
-                        reasons.append("heart_rate_delta_rise")
-
-                if "temperature_delta" in out.columns:
-                    if abs(out.at[idx, "temperature_delta"]) >= temp_delta_worsen:
-                        reasons.append("temp_delta_worsen")
+                        
+                        if "heart_rate_delta" in out.columns:
+                            if out.at[idx, "heart_rate_delta"] >= heart_rate_delta_rise:
+                                reasons.append("heart_rate_delta_rise")
+                                
+                                if "temperature_delta" in out.columns:
+                                    if abs(out.at[idx, "temperature_delta"]) >= temp_delta_worsen:
+                                        reasons.append("temp_delta_worsen")
 
             # =========================
             # 🔹 Decision logic
             # =========================
-            real_signals = [r for r in reasons if r != "event_now_override"]
+real_signals = [r for r in reasons if r != "event_now_override"]
 
-            if real_signals or "initial_alert" in reasons:
-                out.at[idx, gss_alert_col] = True
-                out.at[idx, escalation_col] = True
-                out.at[idx, escalation_reason_col] = "+".join(
-                    real_signals if real_signals else ["initial_alert"]
-                )
-
-                last_alert_risk = current_risk
-
-            elif "event_now_override" in reasons:
-                out.at[idx, gss_alert_col] = True
-                out.at[idx, escalation_col] = True
-                out.at[idx, escalation_reason_col] = "event_now_fallback"
-
-                last_alert_risk = current_risk
-
-            else:
-                out.at[idx, gss_alert_col] = False
-                out.at[idx, suppressed_col] = True
-                out.at[idx, escalation_reason_col] = "suppressed_stable"
+if real_signals or "initial_alert" in reasons:
+    out.at[idx, gss_alert_col] = True
+    out.at[idx, escalation_col] = True
+    out.at[idx, escalation_reason_col] = "+".join(
+        real_signals if real_signals else ["initial_alert"]
+    )
+    last_alert_risk = current_risk
+elif "event_now_override" in reasons:
+    out.at[idx, gss_alert_col] = True
+    out.at[idx, escalation_col] = True
+    out.at[idx, escalation_reason_col] = "event_now_fallback"
+    last_alert_risk = current_risk
+else:
+    out.at[idx, gss_alert_col] = False
+    out.at[idx, suppressed_col] = True
+    out.at[idx, escalation_reason_col] = "suppressed_stable"
