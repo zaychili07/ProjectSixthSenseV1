@@ -1372,7 +1372,9 @@ elif "event_now_override" in reasons:
     out.at[idx, gss_alert_col] = True
     out.at[idx, escalation_col] = True
     out.at[idx, escalation_reason_col] = "event_now_fallback"
+    
     last_alert_risk = current_risk
+
 else:
     out.at[idx, gss_alert_col] = False
     out.at[idx, suppressed_col] = True
