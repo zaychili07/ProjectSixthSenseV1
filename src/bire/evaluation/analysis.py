@@ -1297,10 +1297,9 @@ def apply_gss_with_delta_override(
     out[escalation_col] = False
     out[escalation_reason_col] = "no_alert"
 
-    for patient_id, group in out.groupby(patient_col, sort=False):
+        for patient_id, group in out.groupby(patient_col, sort=False):
 
         last_alert_risk = None
-        suppression_active = False
 
         for idx in group.index:
 
@@ -1310,10 +1309,11 @@ def apply_gss_with_delta_override(
                 continue
 
             current_risk = out.at[idx, prob_col]
-
             reasons = []
 
-            # First alert always fires
+            # =========================
+            # 🔹 First alert
+            # =========================
             if last_alert_risk is None:
                 reasons.append("initial_alert")
 
@@ -1328,17 +1328,17 @@ def apply_gss_with_delta_override(
                     reasons.append("risk_delta_break")
 
                 # =========================
-                # 🔹 Event override
+                # 🔹 Event override (FIXED INDENT)
                 # =========================
-               if event_col in out.columns and bool(out.at[idx, event_col]): # Only trigger if no earlier signal triggered
-                   if not reasons:
-                       reasons.append("event_now_override")
+                if event_col in out.columns and bool(out.at[idx, event_col]):
+                    if not reasons:
+                        reasons.append("event_now_override")
 
                 # =========================
-                # 🔹 Delta-based overrides
+                # 🔹 Delta overrides
                 # =========================
                 if "spo2_delta" in out.columns:
-                    i1f out.at[idx, "spo2_delta"] <= spo2_delta_drop:
+                    if out.at[idx, "spo2_delta"] <= spo2_delta_drop:
                         reasons.append("spo2_delta_drop")
 
                 if "sbp_delta" in out.columns:
@@ -1358,14 +1358,9 @@ def apply_gss_with_delta_override(
                         reasons.append("temp_delta_worsen")
 
             # =========================
-            # 🔹 Decision Logic
+            # 🔹 Decision logic
             # =========================
-    
-
-            real_signals = [
-                r for r in reasons
-                if r != "event_now_override"
-            ]
+            real_signals = [r for r in reasons if r != "event_now_override"]
 
             if real_signals or "initial_alert" in reasons:
                 out.at[idx, gss_alert_col] = True
@@ -1375,16 +1370,13 @@ def apply_gss_with_delta_override(
                 )
 
                 last_alert_risk = current_risk
-                suppression_active = True
 
             elif "event_now_override" in reasons:
-                # Only allow event_now if nothing else triggered
                 out.at[idx, gss_alert_col] = True
                 out.at[idx, escalation_col] = True
                 out.at[idx, escalation_reason_col] = "event_now_fallback"
 
                 last_alert_risk = current_risk
-                suppression_active = True
 
             else:
                 out.at[idx, gss_alert_col] = False
