@@ -1044,3 +1044,49 @@ def add_event_episode_flags(
     ).astype(int)
 
     return out
+
+def apply_gss(
+    df,
+    prob_col="pred_proba",
+    alert_col="alert_episode_flag",
+    patient_col="patient_id",
+    time_col="timestamp",
+    gss_alert_col="gss_alert",
+    suppressed_col="gss_suppressed",
+    escalation_col="gss_escalation",
+    risk_delta=0.02,
+):
+    out = df.copy()
+    out[time_col] = pd.to_datetime(out[time_col])
+    out = out.sort_values([patient_col, time_col]).copy()
+
+    out[gss_alert_col] = 0
+    out[suppressed_col] = 0
+    out[escalation_col] = 0
+
+    for _, group in out.groupby(patient_col, sort=False):
+        suppressing = False
+        last_alert_risk = None
+
+        for idx, row in group.iterrows():
+            risk = row[prob_col]
+            raw_alert = row[alert_col] == 1
+
+            if raw_alert and not suppressing:
+                out.loc[idx, gss_alert_col] = 1
+                suppressing = True
+                last_alert_risk = risk
+
+            elif raw_alert and suppressing:
+                if last_alert_risk is not None and risk >= last_alert_risk + risk_delta:
+                    out.loc[idx, gss_alert_col] = 1
+                    out.loc[idx, escalation_col] = 1
+                    last_alert_risk = risk
+                else:
+                    out.loc[idx, suppressed_col] = 1
+
+            if suppressing and last_alert_risk is not None:
+                if risk < last_alert_risk - risk_delta:
+                    suppressing = False
+
+    return out
