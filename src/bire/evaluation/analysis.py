@@ -1104,11 +1104,12 @@ def apply_gss_with_vital_override(
     escalation_reason_col="gss_v2_escalation_reason",
     risk_delta=0.013,
     escalation_threshold=0.995,
-    spo2_drop=2.0,
-    sbp_drop=10.0,
-    resp_rate_rise=4.0,
-    heart_rate_rise=10.0,
-    temp_rise=0.5,
+    spo2_drop = 1.0
+    sbp_drop = 5.0
+    resp_rate_rise = 2.0
+    heart_rate_rise = 5.0
+    temp_rise = 0.3
+    
 ):
     """
     GSS v2: Gateway Suppression System with vital-based override.
