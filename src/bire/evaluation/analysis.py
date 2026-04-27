@@ -1360,32 +1360,34 @@ def apply_gss_with_delta_override(
             # =========================
             # 🔹 Decision Logic
             # =========================
-real_signals = [
-    r for r in reasons
-    if r not in ["event_now_override"]
-]
+    
 
-# 🔥 Decision logic
-if real_signals or "initial_alert" in reasons:
-    out.at[idx, gss_alert_col] = True
-    out.at[idx, escalation_col] = True
-    out.at[idx, escalation_reason_col] = "+".join(real_signals if real_signals else ["initial_alert"])
+            real_signals = [
+                r for r in reasons
+                if r != "event_now_override"
+            ]
 
-    last_alert_risk = current_risk
-    suppression_active = True
+            if real_signals or "initial_alert" in reasons:
+                out.at[idx, gss_alert_col] = True
+                out.at[idx, escalation_col] = True
+                out.at[idx, escalation_reason_col] = "+".join(
+                    real_signals if real_signals else ["initial_alert"]
+                )
 
-elif "event_now_override" in reasons:
-    # Only allow event_now if nothing else triggered
-    out.at[idx, gss_alert_col] = True
-    out.at[idx, escalation_col] = True
-    out.at[idx, escalation_reason_col] = "event_now_fallback"
+                last_alert_risk = current_risk
+                suppression_active = True
 
-    last_alert_risk = current_risk
-    suppression_active = True
+            elif "event_now_override" in reasons:
+                # Only allow event_now if nothing else triggered
+                out.at[idx, gss_alert_col] = True
+                out.at[idx, escalation_col] = True
+                out.at[idx, escalation_reason_col] = "event_now_fallback"
 
-else:
-    out.at[idx, gss_alert_col] = False
-    out.at[idx, suppressed_col] = True
-    out.at[idx, escalation_reason_col] = "suppressed_stable"
+                last_alert_risk = current_risk
+                suppression_active = True
 
+            else:
+                out.at[idx, gss_alert_col] = False
+                out.at[idx, suppressed_col] = True
+                out.at[idx, escalation_reason_col] = "suppressed_stable"
 return out
