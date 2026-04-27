@@ -840,3 +840,176 @@ def add_adaptive_patient_alerts(
     ).astype(int)
 
     return out
+BIRE_MODE_CONFIGS = {
+    "icu": {
+        "label": "ICU Mode",
+        "threshold": 0.990,
+        "persistence_steps": 3,
+        "description": "Highest sensitivity for high-acuity continuous monitoring.",
+    },
+    "er": {
+        "label": "ER Mode",
+        "threshold": 0.992,
+        "persistence_steps": 3,
+        "description": "High sensitivity with slightly stronger alert control for high-throughput care.",
+    },
+    "inpatient": {
+        "label": "Inpatient Mode",
+        "threshold": 0.994,
+        "persistence_steps": 3,
+        "description": "Balanced alerting for admitted patients outside critical care.",
+    },
+    "walk_in": {
+        "label": "Walk-in / Check-up Mode",
+        "threshold": 0.995,
+        "persistence_steps": 3,
+        "description": "Conservative monitoring for lower-acuity surveillance.",
+    },
+}
+
+
+def get_bire_mode_config(mode: str) -> dict:
+    """
+    Return alert-policy configuration for a BIRE clinical mode.
+    """
+    mode_key = mode.lower().strip()
+
+    if mode_key not in BIRE_MODE_CONFIGS:
+        valid_modes = list(BIRE_MODE_CONFIGS.keys())
+        raise ValueError(
+            f"Unknown BIRE mode: {mode}. Valid modes are: {valid_modes}"
+        )
+
+    return BIRE_MODE_CONFIGS[mode_key]
+
+
+def apply_bire_alert_mode(
+    df: pd.DataFrame,
+    mode: str,
+    prob_col: str = "pred_proba",
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+) -> pd.DataFrame:
+    """
+    Apply a predefined BIRE alert mode to scored patient data.
+    """
+    config = get_bire_mode_config(mode)
+
+    out = add_alert_episode_flags(
+        df=df,
+        threshold=config["threshold"],
+        prob_col=prob_col,
+        patient_col=patient_col,
+        time_col=time_col,
+        persistence_steps=config["persistence_steps"],
+    )
+
+    out["bire_mode"] = mode
+    out["bire_mode_label"] = config["label"]
+    out["bire_threshold"] = config["threshold"]
+    out["bire_persistence_steps"] = config["persistence_steps"]
+
+    return out
+
+def compare_bire_alert_modes(
+    df: pd.DataFrame,
+    modes: list[str] | None = None,
+    event_col: str = "event_now",
+    target_col: str = "target",
+    prob_col: str = "pred_proba",
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    interval_minutes: int = 5,
+    prediction_horizon_minutes: int = 60,
+) -> pd.DataFrame:
+    """
+    Compare predefined BIRE alert modes side-by-side.
+    """
+    if modes is None:
+        modes = ["icu", "er", "inpatient", "walk_in"]
+
+    if event_col not in df.columns:
+        event_col = target_col
+
+    rows = []
+
+    for mode in modes:
+        config = get_bire_mode_config(mode)
+
+        mode_df = apply_bire_alert_mode(
+            df=df,
+            mode=mode,
+            prob_col=prob_col,
+            patient_col=patient_col,
+            time_col=time_col,
+        )
+
+        total_rows = len(mode_df)
+        total_patient_hours = total_rows * interval_minutes / 60
+        total_alerts = int(mode_df["alert_episode_flag"].sum())
+
+        event_rows = mode_df[mode_df[event_col] == 1].copy()
+        total_events = len(event_rows)
+
+        detected_events = 0
+        lead_times = []
+
+        for _, event in event_rows.iterrows():
+            pid = event[patient_col]
+            event_time = event[time_col]
+            lookback_start = event_time - pd.Timedelta(
+                minutes=prediction_horizon_minutes
+            )
+
+            prior_alerts = mode_df[
+                (mode_df[patient_col] == pid)
+                & (mode_df[time_col] >= lookback_start)
+                & (mode_df[time_col] < event_time)
+                & (mode_df["alert_episode_flag"] == 1)
+            ]
+
+            if not prior_alerts.empty:
+                detected_events += 1
+                first_alert_time = prior_alerts[time_col].min()
+                lead_times.append(
+                    (event_time - first_alert_time).total_seconds() / 60
+                )
+
+        false_alerts = 0
+        alert_rows = mode_df[mode_df["alert_episode_flag"] == 1].copy()
+
+        for _, alert in alert_rows.iterrows():
+            pid = alert[patient_col]
+            alert_time = alert[time_col]
+            future_end = alert_time + pd.Timedelta(
+                minutes=prediction_horizon_minutes
+            )
+
+            future_events = mode_df[
+                (mode_df[patient_col] == pid)
+                & (mode_df[time_col] > alert_time)
+                & (mode_df[time_col] <= future_end)
+                & (mode_df[event_col] == 1)
+            ]
+
+            if future_events.empty:
+                false_alerts += 1
+
+        rows.append({
+            "mode": mode,
+            "mode_label": config["label"],
+            "threshold": config["threshold"],
+            "persistence_steps": config["persistence_steps"],
+            "total_events": total_events,
+            "detected_events": detected_events,
+            "missed_events": total_events - detected_events,
+            "detection_rate": detected_events / total_events if total_events > 0 else np.nan,
+            "median_lead_time_min": np.median(lead_times) if lead_times else np.nan,
+            "total_alert_episodes": total_alerts,
+            "alerts_per_patient_hour": total_alerts / total_patient_hours if total_patient_hours > 0 else np.nan,
+            "false_alert_episodes": false_alerts,
+            "false_alert_rate": false_alerts / total_alerts if total_alerts > 0 else np.nan,
+            "description": config["description"],
+        })
+
+    return pd.DataFrame(rows)
