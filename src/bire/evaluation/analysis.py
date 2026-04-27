@@ -1257,30 +1257,12 @@ def apply_gss_with_delta_override(
     escalation_reason_col="gss_v21_escalation_reason",
     risk_delta=0.013,
     escalation_threshold=0.995,
-   spo2_delta_drop = -0.5,
-    sbp_delta_drop = -2.0,
-    resp_rate_delta_rise = 1.0,
-    heart_rate_delta_rise = 2.0,
-    temp_delta_worsen = 0.2,
+    spo2_delta_drop=-0.5,
+    sbp_delta_drop=-2.0,
+    resp_rate_delta_rise=1.0,
+    heart_rate_delta_rise=2.0,
+    temp_delta_worsen=0.2,
 ):
-    """
-    GSS v2.1 — Delta-Based Override (Temporal Signal Aware)
-
-    Core Idea:
-    Suppress alerts ONLY if:
-        - risk is stable
-        - AND vitals are not trending worse
-
-    Break suppression if:
-        - risk increases
-        - OR temporal deterioration signals appear (delta features)
-
-    IMPORTANT:
-    Uses delta features (rate-of-change) instead of static thresholds.
-    Designed for early detection, not reaction.
-    """
-
-    import numpy as np
     import pandas as pd
 
     out = df.copy()
@@ -1291,90 +1273,75 @@ def apply_gss_with_delta_override(
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
 
-    # Initialize columns
     out[gss_alert_col] = False
     out[suppressed_col] = False
     out[escalation_col] = False
     out[escalation_reason_col] = "no_alert"
-    
+
     for patient_id, group in out.groupby(patient_col, sort=False):
         last_alert_risk = None
-        
+
         for idx in group.index:
             is_alert = bool(out.at[idx, alert_col])
-            
+
             if not is_alert:
                 continue
-                
-                current_risk = out.at[idx, prob_col]
-                reasons = []
 
-            # =========================
-            # 🔹 First alert
-            # =========================
-                if last_alert_risk is None:
-                    reasons.append("initial_alert")
-                
-                else:
-                # =========================
-                # 🔹 Risk-based overrides
-                # =========================
-                    if current_risk >= escalation_threshold:
-                        reasons.append("escalation_threshold")
-                        
-                        if current_risk - last_alert_risk >= risk_delta:
-                            reasons.append("risk_delta_break")
+            current_risk = out.at[idx, prob_col]
+            reasons = []
 
-                # =========================
-                # 🔹 Event override (FIXED INDENT)
-                # =========================
-                    if event_col in out.columns and bool(out.at[idx, event_col]):
-                        if not reasons:
-                            reasons.append("event_now_override")
+            if last_alert_risk is None:
+                reasons.append("initial_alert")
+            else:
+                if current_risk >= escalation_threshold:
+                    reasons.append("escalation_threshold")
 
-                # =========================
-                # 🔹 Delta overrides
-                # =========================
-if "spo2_delta" in out.columns:
-    if out.at[idx, "spo2_delta"] <= spo2_delta_drop:
-        reasons.append("spo2_delta_drop")
-        
-        if "sbp_delta" in out.columns:
-            if out.at[idx, "sbp_delta"] <= sbp_delta_drop:
-                reasons.append("sbp_delta_drop")
-                
+                if current_risk - last_alert_risk >= risk_delta:
+                    reasons.append("risk_delta_break")
+
+                if "spo2_delta" in out.columns:
+                    if pd.notna(out.at[idx, "spo2_delta"]) and out.at[idx, "spo2_delta"] <= spo2_delta_drop:
+                        reasons.append("spo2_delta_drop")
+
+                if "sbp_delta" in out.columns:
+                    if pd.notna(out.at[idx, "sbp_delta"]) and out.at[idx, "sbp_delta"] <= sbp_delta_drop:
+                        reasons.append("sbp_delta_drop")
+
                 if "resp_rate_delta" in out.columns:
-                    if out.at[idx, "resp_rate_delta"] >= resp_rate_delta_rise:
+                    if pd.notna(out.at[idx, "resp_rate_delta"]) and out.at[idx, "resp_rate_delta"] >= resp_rate_delta_rise:
                         reasons.append("resp_rate_delta_rise")
-                        
-                        if "heart_rate_delta" in out.columns:
-                            if out.at[idx, "heart_rate_delta"] >= heart_rate_delta_rise:
-                                reasons.append("heart_rate_delta_rise")
-                                
-                                if "temperature_delta" in out.columns:
-                                    if abs(out.at[idx, "temperature_delta"]) >= temp_delta_worsen:
-                                        reasons.append("temp_delta_worsen")
 
-            # =========================
-            # 🔹 Decision logic
-            # =========================
-real_signals = [r for r in reasons if r != "event_now_override"]
+                if "heart_rate_delta" in out.columns:
+                    if pd.notna(out.at[idx, "heart_rate_delta"]) and out.at[idx, "heart_rate_delta"] >= heart_rate_delta_rise:
+                        reasons.append("heart_rate_delta_rise")
 
-if real_signals or "initial_alert" in reasons:
-    out.at[idx, gss_alert_col] = True
-    out.at[idx, escalation_col] = True
-    out.at[idx, escalation_reason_col] = "+".join(
-        real_signals if real_signals else ["initial_alert"]
-    )
-    last_alert_risk = current_risk
-elif "event_now_override" in reasons:
-    out.at[idx, gss_alert_col] = True
-    out.at[idx, escalation_col] = True
-    out.at[idx, escalation_reason_col] = "event_now_fallback"
-    
-    last_alert_risk = current_risk
+                if "temperature_delta" in out.columns:
+                    if pd.notna(out.at[idx, "temperature_delta"]) and abs(out.at[idx, "temperature_delta"]) >= temp_delta_worsen:
+                        reasons.append("temp_delta_worsen")
 
-else:
-    out.at[idx, gss_alert_col] = False
-    out.at[idx, suppressed_col] = True
-    out.at[idx, escalation_reason_col] = "suppressed_stable"
+                if event_col in out.columns and bool(out.at[idx, event_col]):
+                    if not reasons:
+                        reasons.append("event_now_override")
+
+            real_signals = [r for r in reasons if r != "event_now_override"]
+
+            if real_signals or "initial_alert" in reasons:
+                out.at[idx, gss_alert_col] = True
+                out.at[idx, escalation_col] = True
+                out.at[idx, escalation_reason_col] = "+".join(
+                    real_signals if real_signals else ["initial_alert"]
+                )
+                last_alert_risk = current_risk
+
+            elif "event_now_override" in reasons:
+                out.at[idx, gss_alert_col] = True
+                out.at[idx, escalation_col] = True
+                out.at[idx, escalation_reason_col] = "event_now_fallback"
+                last_alert_risk = current_risk
+
+            else:
+                out.at[idx, gss_alert_col] = False
+                out.at[idx, suppressed_col] = True
+                out.at[idx, escalation_reason_col] = "suppressed_stable"
+
+    return out
