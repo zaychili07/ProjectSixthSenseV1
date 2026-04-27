@@ -1090,3 +1090,155 @@ def apply_gss(
                     suppressing = False
 
     return out
+
+def apply_gss_with_vital_override(
+    df,
+    prob_col="pred_proba",
+    alert_col="alert_episode_flag",
+    patient_col="patient_id",
+    time_col="timestamp",
+    event_col="event_now",
+    gss_alert_col="gss_v2_alert",
+    suppressed_col="gss_v2_suppressed",
+    escalation_col="gss_v2_escalation",
+    escalation_reason_col="gss_v2_escalation_reason",
+    risk_delta=0.013,
+    escalation_threshold=0.995,
+    spo2_drop=2.0,
+    sbp_drop=10.0,
+    resp_rate_rise=4.0,
+    heart_rate_rise=10.0,
+    temp_rise=0.5,
+):
+    """
+    GSS v2: Gateway Suppression System with vital-based override.
+
+    Purpose:
+    - Suppress redundant repeat alerts when risk/vitals are stable.
+    - Break suppression when risk escalates or vitals worsen.
+    - Designed as a prototype alert-control layer for synthetic-data research.
+
+    Important:
+    These vital override thresholds are prototype engineering rules,
+    not validated clinical thresholds.
+    """
+
+    import numpy as np
+    import pandas as pd
+
+    out = df.copy()
+    out = out.sort_values([patient_col, time_col]).reset_index(drop=True)
+
+    required_cols = [patient_col, time_col, prob_col, alert_col]
+    missing = [c for c in required_cols if c not in out.columns]
+    if missing:
+        raise ValueError(f"Missing required columns for GSS v2: {missing}")
+
+    # Initialize output columns
+    out[gss_alert_col] = False
+    out[suppressed_col] = False
+    out[escalation_col] = False
+    out[escalation_reason_col] = "no_alert"
+
+    # Work patient-by-patient
+    for patient_id, group in out.groupby(patient_col, sort=False):
+        last_alert_risk = None
+        last_alert_vitals = None
+        suppression_active = False
+
+        for idx in group.index:
+            is_alert_episode = bool(out.at[idx, alert_col])
+
+            if not is_alert_episode:
+                out.at[idx, escalation_reason_col] = "no_alert"
+                continue
+
+            current_risk = out.at[idx, prob_col]
+
+            current_vitals = {
+                "spo2": out.at[idx, "spo2"] if "spo2" in out.columns else np.nan,
+                "sbp": out.at[idx, "sbp"] if "sbp" in out.columns else np.nan,
+                "resp_rate": out.at[idx, "resp_rate"] if "resp_rate" in out.columns else np.nan,
+                "heart_rate": out.at[idx, "heart_rate"] if "heart_rate" in out.columns else np.nan,
+                "temperature": out.at[idx, "temperature"] if "temperature" in out.columns else np.nan,
+            }
+
+            # First alert always fires
+            if last_alert_risk is None:
+                out.at[idx, gss_alert_col] = True
+                out.at[idx, escalation_col] = True
+                out.at[idx, escalation_reason_col] = "initial_alert"
+
+                last_alert_risk = current_risk
+                last_alert_vitals = current_vitals
+                suppression_active = True
+                continue
+
+            reasons = []
+
+            # Risk-based override
+            if current_risk >= escalation_threshold:
+                reasons.append("escalation_threshold")
+
+            if current_risk - last_alert_risk >= risk_delta:
+                reasons.append("risk_delta_break")
+
+            # Event override
+            if event_col in out.columns and bool(out.at[idx, event_col]):
+                reasons.append("event_now_override")
+
+            # Vital-based overrides
+            if last_alert_vitals is not None:
+                if (
+                    not pd.isna(current_vitals["spo2"])
+                    and not pd.isna(last_alert_vitals["spo2"])
+                    and last_alert_vitals["spo2"] - current_vitals["spo2"] >= spo2_drop
+                ):
+                    reasons.append("spo2_drop")
+
+                if (
+                    not pd.isna(current_vitals["sbp"])
+                    and not pd.isna(last_alert_vitals["sbp"])
+                    and last_alert_vitals["sbp"] - current_vitals["sbp"] >= sbp_drop
+                ):
+                    reasons.append("sbp_drop")
+
+                if (
+                    not pd.isna(current_vitals["resp_rate"])
+                    and not pd.isna(last_alert_vitals["resp_rate"])
+                    and current_vitals["resp_rate"] - last_alert_vitals["resp_rate"] >= resp_rate_rise
+                ):
+                    reasons.append("resp_rate_rise")
+
+                if (
+                    not pd.isna(current_vitals["heart_rate"])
+                    and not pd.isna(last_alert_vitals["heart_rate"])
+                    and current_vitals["heart_rate"] - last_alert_vitals["heart_rate"] >= heart_rate_rise
+                ):
+                    reasons.append("heart_rate_rise")
+
+                if (
+                    not pd.isna(current_vitals["temperature"])
+                    and not pd.isna(last_alert_vitals["temperature"])
+                    and abs(current_vitals["temperature"] - 37.0)
+                    - abs(last_alert_vitals["temperature"] - 37.0)
+                    >= temp_rise
+                ):
+                    reasons.append("temp_more_abnormal")
+
+            # Fire or suppress
+            if reasons:
+                out.at[idx, gss_alert_col] = True
+                out.at[idx, escalation_col] = True
+                out.at[idx, escalation_reason_col] = "+".join(reasons)
+
+                last_alert_risk = current_risk
+                last_alert_vitals = current_vitals
+                suppression_active = True
+            else:
+                out.at[idx, gss_alert_col] = False
+                out.at[idx, suppressed_col] = True
+                out.at[idx, escalation_col] = False
+                out.at[idx, escalation_reason_col] = "suppressed_stable"
+
+    return out
