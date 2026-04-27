@@ -1390,4 +1390,3 @@ def apply_gss_with_delta_override(
                 out.at[idx, gss_alert_col] = False
                 out.at[idx, suppressed_col] = True
                 out.at[idx, escalation_reason_col] = "suppressed_stable"
-return out
