@@ -219,17 +219,11 @@ Forward-looking deterioration within 60 minutes using:
 * Leakage prevention across time + patients
 
 ---
+## 🧬 BIRE Alerting Architecture
 
-##  Alerting Framework
+![BIRE Architecture](assets/BIRE_alerting_architecture.png)
 
-* Threshold-based filtering
-* Persistence requirement
-
-This produces:
-
-* fewer false positives
-* clinically meaningful alert episodes
-
+BIRE separates risk prediction from alert decision-making, using the Gateway Suppression System (GSS) to ensure alerts are context-aware and clinically meaningful.
 ---
 
 ##  Operational Performance
