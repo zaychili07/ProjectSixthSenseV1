@@ -38,6 +38,13 @@ to generate **forward-looking risk scores and low-noise alert episodes**.
 
 ---
 
+---
+##  BIRE Alerting Architecture
+
+![BIRE Architecture](assets/BIRE_Alerting_Architecture.png)
+
+BIRE separates risk prediction from alert decision-making, using the Gateway Suppression System (GSS) to ensure alerts are context-aware and clinically meaningful.
+
 ##  Event-Level Detection
 
 ![Event Detection](outputs/figures/event_detection_summary.png)
@@ -218,12 +225,6 @@ Forward-looking deterioration within 60 minutes using:
 * Patient-level time-aware split
 * Leakage prevention across time + patients
 
----
-## 🧬 BIRE Alerting Architecture
-
-![BIRE Architecture](assets/BIRE_Alerting_Architecture.png)
-
-BIRE separates risk prediction from alert decision-making, using the Gateway Suppression System (GSS) to ensure alerts are context-aware and clinically meaningful.
 ---
 
 ##  Operational Performance
