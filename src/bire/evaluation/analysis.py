@@ -1312,26 +1312,25 @@ def apply_gss_with_delta_override(
             # =========================
             # 🔹 First alert
             # =========================
-if last_alert_risk is None:
-    reasons.append("initial_alert")
-
-else:
+                if last_alert_risk is None:
+                    reasons.append("initial_alert")
+                
+                else:
                 # =========================
                 # 🔹 Risk-based overrides
                 # =========================
-    if current_risk >= escalation_threshold:
-        reasons.append("escalation_threshold")
-        
-        if current_risk - last_alert_risk >= risk_delta:
-            reasons.append("risk_delta_break")
+                    if current_risk >= escalation_threshold:
+                        reasons.append("escalation_threshold")
+                        
+                        if current_risk - last_alert_risk >= risk_delta:
+                            reasons.append("risk_delta_break")
 
                 # =========================
                 # 🔹 Event override (FIXED INDENT)
                 # =========================
-            
-            if event_col in out.columns and bool(out.at[idx, event_col]):
-                if not reasons:
-                    reasons.append("event_now_override")
+                    if event_col in out.columns and bool(out.at[idx, event_col]):
+                        if not reasons:
+                            reasons.append("event_now_override")
 
                 # =========================
                 # 🔹 Delta overrides
