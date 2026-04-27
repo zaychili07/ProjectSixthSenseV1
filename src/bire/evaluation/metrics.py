@@ -108,3 +108,73 @@ def evaluate_multiple_splits(model, splits_dict):
         all_probas[split_name] = proba
 
     return pd.DataFrame(all_results), all_probas
+
+# used for Risk_delta tuning sweeps
+def compute_alert_metrics(
+    df,
+    alert_col,
+    event_col="event_episode_flag",
+    patient_col="patient_id",
+    time_col="timestamp",
+    interval_minutes=5,
+    prediction_horizon_minutes=60,
+):
+    total_rows = len(df)
+    total_patient_hours = (total_rows * interval_minutes) / 60
+    total_alerts = int(df[alert_col].sum())
+
+    event_rows = df[df[event_col] == 1]
+    total_events = len(event_rows)
+
+    detected_events = 0
+    lead_times = []
+
+    for _, event in event_rows.iterrows():
+        pid = event[patient_col]
+        event_time = event[time_col]
+
+        lookback_start = event_time - pd.Timedelta(
+            minutes=prediction_horizon_minutes
+        )
+
+        prior_alerts = df[
+            (df[patient_col] == pid)
+            & (df[time_col] >= lookback_start)
+            & (df[time_col] < event_time)
+            & (df[alert_col] == 1)
+        ]
+
+        if not prior_alerts.empty:
+            detected_events += 1
+            first_alert_time = prior_alerts[time_col].min()
+            lead_times.append(
+                (event_time - first_alert_time).total_seconds() / 60
+            )
+
+    false_alerts = 0
+    alert_rows = df[df[alert_col] == 1]
+
+    for _, alert in alert_rows.iterrows():
+        pid = alert[patient_col]
+        alert_time = alert[time_col]
+
+        future_end = alert_time + pd.Timedelta(
+            minutes=prediction_horizon_minutes
+        )
+
+        future_events = df[
+            (df[patient_col] == pid)
+            & (df[time_col] > alert_time)
+            & (df[time_col] <= future_end)
+            & (df[event_col] == 1)
+        ]
+
+        if future_events.empty:
+            false_alerts += 1
+
+    return {
+        "alerts_per_hour": total_alerts / total_patient_hours if total_patient_hours > 0 else None,
+        "detection_rate": detected_events / total_events if total_events > 0 else None,
+        "false_alert_rate": false_alerts / total_alerts if total_alerts > 0 else None,
+        "median_lead_time": np.median(lead_times) if lead_times else None,
+    }
