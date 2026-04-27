@@ -1330,14 +1330,15 @@ def apply_gss_with_delta_override(
                 # =========================
                 # 🔹 Event override
                 # =========================
-                if event_col in out.columns and bool(out.at[idx, event_col]):
-                    reasons.append("event_now_override")
+               if event_col in out.columns and bool(out.at[idx, event_col]): # Only trigger if no earlier signal triggered
+                   if not reasons:
+                       reasons.append("event_now_override")
 
                 # =========================
                 # 🔹 Delta-based overrides
                 # =========================
                 if "spo2_delta" in out.columns:
-                    if out.at[idx, "spo2_delta"] <= spo2_delta_drop:
+                    i1f out.at[idx, "spo2_delta"] <= spo2_delta_drop:
                         reasons.append("spo2_delta_drop")
 
                 if "sbp_delta" in out.columns:
