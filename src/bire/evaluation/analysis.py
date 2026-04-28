@@ -1349,23 +1349,23 @@ def apply_gss_with_delta_override(
                     reasons.append("risk_delta_break")
 
                 if "spo2_delta" in out.columns:
-                    if is_persistent(out, idx, "spo2_delta", spo2_delta_drop, "drop", steps=2):
+                    if is_persistent(out, idx, "spo2_delta", spo2_delta_drop, "drop", steps = delta_persistence_steps):
                         reasons.append("spo2_delta_drop")
 
                 if "sbp_delta" in out.columns:
-                    if is_persistent(out, idx, "sbp_delta", sbp_delta_drop, "drop", steps=2):
+                    if is_persistent(out, idx, "sbp_delta", sbp_delta_drop, "drop", steps = delta_persistence_steps):
                         reasons.append("sbp_delta_drop")
 
                 if "resp_rate_delta" in out.columns:
-                   if is_persistent(out, idx, "resp_rate_delta", resp_rate_delta_rise, "rise", steps=2):
+                   if is_persistent(out, idx, "resp_rate_delta", resp_rate_delta_rise, "rise", steps = delta_persistence_steps):
                        reasons.append("resp_rate_delta_rise")
                        
                 if "heart_rate_delta" in out.columns:
-                    if is_persistent(out, idx, "heart_rate_delta", heart_rate_delta_rise, "rise", steps = 2):
+                    if is_persistent(out, idx, "heart_rate_delta", heart_rate_delta_rise, "rise", steps = delta_persistence_steps):
                         reasons.append("heart_rate_delta_rise")
 
                 if "temperature_delta" in out.columns:
-                    if is_persistent(out, idx, "temperature_delta", temp_delta_worsen, "rise", steps=2):
+                    if is_persistent(out, idx, "temperature_delta", temp_delta_worsen, "rise", steps = delta_persistence_steps):
                         reasons.append("temp_delta_worsen")
 
             
