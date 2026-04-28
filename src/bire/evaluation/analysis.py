@@ -1457,3 +1457,119 @@ def apply_gss_with_delta_override(
                 out.at[idx, escalation_reason_col] = "suppressed_stable"
 
     return out
+
+def audit_alert_timing(
+    df: pd.DataFrame,
+    alert_col: str,
+    event_col: str = "event_episode_flag",
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    prediction_window_minutes: int = 60,
+) -> pd.DataFrame:
+    """
+    Timing-aware alert audit.
+
+    Classifies each alert as:
+    - true_predictive_alert
+    - early_beyond_60_alert
+    - post_event_alert
+    - no_event_for_patient
+    """
+    required_cols = {alert_col, event_col, patient_col, time_col}
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")
+
+    temp = df.copy()
+    temp[time_col] = pd.to_datetime(temp[time_col])
+    temp = temp.sort_values([patient_col, time_col]).reset_index(drop=True)
+
+    alerts = temp[temp[alert_col].astype(bool)].copy()
+    rows = []
+
+    reason_col = alert_col.replace("_alert", "_escalation_reason")
+
+    for _, alert in alerts.iterrows():
+        patient_id = alert[patient_col]
+        alert_time = alert[time_col]
+
+        patient_events = temp[
+            (temp[patient_col] == patient_id)
+            & (temp[event_col] == 1)
+        ][time_col].drop_duplicates()
+
+        if patient_events.empty:
+            rows.append({
+                "patient_id": patient_id,
+                "alert_time": alert_time,
+                "alert_col": alert_col,
+                "reason": alert[reason_col] if reason_col in alert.index else None,
+                "nearest_event_time": pd.NaT,
+                "minutes_to_nearest_event": np.nan,
+                "timing_category": "no_event_for_patient",
+            })
+            continue
+
+        deltas = (patient_events - alert_time).dt.total_seconds() / 60.0
+        nearest_idx = deltas.abs().idxmin()
+        nearest_delta = deltas.loc[nearest_idx]
+        nearest_event_time = patient_events.loc[nearest_idx]
+
+        if 0 <= nearest_delta <= prediction_window_minutes:
+            timing_category = "true_predictive_alert"
+        elif nearest_delta > prediction_window_minutes:
+            timing_category = "early_beyond_60_alert"
+        else:
+            timing_category = "post_event_alert"
+
+        rows.append({
+            "patient_id": patient_id,
+            "alert_time": alert_time,
+            "alert_col": alert_col,
+            "reason": alert[reason_col] if reason_col in alert.index else None,
+            "nearest_event_time": nearest_event_time,
+            "minutes_to_nearest_event": nearest_delta,
+            "timing_category": timing_category,
+        })
+
+    return pd.DataFrame(rows)
+
+
+def summarize_alert_timing(
+    timing_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Summarize timing-aware alert categories.
+    """
+    if timing_df.empty:
+        return pd.DataFrame([{
+            "total_alerts": 0,
+            "true_predictive_alerts": 0,
+            "post_event_alerts": 0,
+            "early_beyond_60_alerts": 0,
+            "no_event_for_patient_alerts": 0,
+            "true_predictive_rate": 0.0,
+            "post_event_rate": 0.0,
+            "early_beyond_60_rate": 0.0,
+            "no_event_for_patient_rate": 0.0,
+        }])
+
+    counts = timing_df["timing_category"].value_counts()
+    total_alerts = len(timing_df)
+
+    true_predictive = int(counts.get("true_predictive_alert", 0))
+    post_event = int(counts.get("post_event_alert", 0))
+    early_beyond_60 = int(counts.get("early_beyond_60_alert", 0))
+    no_event = int(counts.get("no_event_for_patient", 0))
+
+    return pd.DataFrame([{
+        "total_alerts": total_alerts,
+        "true_predictive_alerts": true_predictive,
+        "post_event_alerts": post_event,
+        "early_beyond_60_alerts": early_beyond_60,
+        "no_event_for_patient_alerts": no_event,
+        "true_predictive_rate": true_predictive / total_alerts,
+        "post_event_rate": post_event / total_alerts,
+        "early_beyond_60_rate": early_beyond_60 / total_alerts,
+        "no_event_for_patient_rate": no_event / total_alerts,
+    }])
