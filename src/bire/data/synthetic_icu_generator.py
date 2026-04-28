@@ -246,15 +246,14 @@ def generate_synthetic_icu_data(
             
             
             if max_event_step > min_event_step:
-                
-            event_anchor_step = int(rng.integers(min_event_step, max_event_step))
-            deterioration_start_step = max(0, event_anchor_step - lead_steps)
-        
-        else:
-            will_deteriorate = False
-            deterioration_mode = "stable"
-            deterioration_start_step = None
-            event_anchor_step = None
+                event_anchor_step = int(rng.integers(min_event_step, max_event_step))
+                deterioration_start_step = max(0, event_anchor_step - lead_steps)
+            
+            else:
+                will_deteriorate = False
+                deterioration_mode = "stable"
+                deterioration_start_step = None
+                event_anchor_step = None
             
     for step in range(n_steps):
         timestamp = start_ts + pd.Timedelta(minutes=5 * step)
