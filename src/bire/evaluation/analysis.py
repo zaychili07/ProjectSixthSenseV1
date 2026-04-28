@@ -1431,18 +1431,18 @@ def apply_gss_with_delta_override(
 
             if should_fire:
                 if "initial_alert" in reasons:
-                out.at[idx, escalation_reason_col] = "initial_alert"
-            elif early_warning:
-                out.at[idx, escalation_reason_col] = "early_warning_risk_rise"
-            else:
-                out.at[idx, escalation_reason_col] = "+".join(risk_signals + delta_signals)
-
-                if "initial_alert" in reasons:
                     out.at[idx, escalation_reason_col] = "initial_alert"
+                elif early_warning:
+                    out.at[idx, escalation_reason_col] = "early_warning_risk_rise"
                 else:
                     out.at[idx, escalation_reason_col] = "+".join(risk_signals + delta_signals)
-
-                last_alert_risk = current_risk
+                    
+                    if "initial_alert" in reasons:
+                        out.at[idx, escalation_reason_col] = "initial_alert"
+                    else:
+                        out.at[idx, escalation_reason_col] = "+".join(risk_signals + delta_signals)
+                        
+                        last_alert_risk = current_risk
 
             elif "event_now_override" in reasons:
                 out.at[idx, gss_alert_col] = True
