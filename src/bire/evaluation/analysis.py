@@ -1355,7 +1355,7 @@ def apply_gss_with_delta_override(
                     if is_persistent(out, idx, "sbp_delta", sbp_delta_drop, "drop", steps=2):
                         reasons.append("sbp_delta_drop")
 
-               if "resp_rate_delta" in out.columns:
+                if "resp_rate_delta" in out.columns:
                    if is_persistent(out, idx, "resp_rate_delta", resp_rate_delta_rise, "rise", steps=2):
                        reasons.append("resp_rate_delta_rise")
                        
