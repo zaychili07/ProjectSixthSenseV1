@@ -1430,17 +1430,26 @@ def apply_gss_with_delta_override(
                 continue
 
             if should_fire:
+                 # 🚨 GSS v2.7 — Post-event suppression (PUT HERE)
+                if event_col in out.columns and bool(out.at[idx, event_col]):
+                    out.at[idx, gss_alert_col] = False
+                    out.at[idx, suppressed_col] = True
+                    out.at[idx, escalation_col] = False
+                    out.at[idx, escalation_reason_col] = "suppressed_post_event"
+                    
+                    continue
+                
                 if "initial_alert" in reasons:
                     out.at[idx, escalation_reason_col] = "initial_alert"
                 elif early_warning:
                     out.at[idx, escalation_reason_col] = "early_warning_risk_rise"
                 else:
                     out.at[idx, escalation_reason_col] = "+".join(risk_signals + delta_signals)
-                    
-                    if "initial_alert" in reasons:
-                        out.at[idx, escalation_reason_col] = "initial_alert"
-                    else:
-                        out.at[idx, escalation_reason_col] = "+".join(risk_signals + delta_signals)
+                     # 🔥 THIS IS REQUIRED (ADD THIS)
+                out.at[idx, gss_alert_col] = True
+                out.at[idx, escalation_col] = True
+                last_gss_alert_idx = idx
+                last_alert_risk = current_risk
                         
                         last_alert_risk = current_risk
 
