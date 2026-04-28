@@ -1451,7 +1451,6 @@ def apply_gss_with_delta_override(
                 last_gss_alert_idx = idx
                 last_alert_risk = current_risk
                         
-                        last_alert_risk = current_risk
 
             elif "event_now_override" in reasons:
                 out.at[idx, gss_alert_col] = True
