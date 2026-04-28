@@ -1392,12 +1392,17 @@ def apply_gss_with_delta_override(
                 
 )
             out.at[idx, signal_score_col] = signal_score # addeed for v2.5
-            
-            should_fire = (
-                "initial_alert" in reasons
-                or signal_score >= min_signal_score
-                or len(delta_signals) >= min_delta_signals
+
+            early_warning = (
+                current_risk > 0.35
+                and (current_risk - last_alert_risk) > 0.05
 )
+            should_fire = (                              # Early Escalation Rule
+                "initial_alert" in reasons
+                or len(risk_signals) > 0
+                or len(delta_signals) >= min_delta_signals
+                or early_warning
+)                # this will modify firing  ↑
             
 
             # =========================
