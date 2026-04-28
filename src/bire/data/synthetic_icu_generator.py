@@ -1,18 +1,15 @@
-# THIS IS A SYNTHETIC GENERATOR I HAD TO ASK GEMMA 4 TO HELP GENERATE
 """
 Synthetic ICU-Grade Data Generator for Project Sixth Sense / BIRE.
 
-Purpose:
-- Generate realistic synthetic time-series vital signs.
-- Support BIRE Mode Selection:
-    ICU, ER, Inpatient, Walk-in
-- Simulate multiple deterioration modes:
-    respiratory failure, septic shock, cardiac instability,
-    hypotensive shock, fever/infection, mixed deterioration.
+This generator creates synthetic time-series vital signs designed to stress-test:
+- BIRE risk prediction
+- BIRE Mode Selection
+- GSS alert suppression
+- Multi-signal deterioration detection
 
 Important:
-This is synthetic prototype data for ML system testing.
-It is NOT validated clinical physiology and should not be used for real care.
+This is synthetic prototype data only.
+It is not validated clinical physiology and must not be used for real care.
 """
 
 from __future__ import annotations
@@ -33,7 +30,7 @@ SIGNAL_COLS = [
 
 CARE_MODE_CONFIGS = {
     "icu": {
-        "deterioration_prob": 0.45,
+        "deterioration_prob": 0.50,
         "min_hours": 12,
         "max_hours": 24,
         "noise_scale": 1.20,
@@ -74,7 +71,6 @@ DETERIORATION_MODES = [
 
 
 def _sample_baseline_vitals(rng: np.random.Generator) -> dict:
-    """Sample patient-specific baseline vitals."""
     return {
         "heart_rate": rng.normal(82, 10),
         "resp_rate": rng.normal(18, 3),
@@ -86,11 +82,6 @@ def _sample_baseline_vitals(rng: np.random.Generator) -> dict:
 
 
 def _event_now(row: pd.Series) -> int:
-    """
-    Clinical threshold-style deterioration label.
-
-    These are prototype rules for synthetic data.
-    """
     return int(
         (row["spo2"] < 90)
         or (row["sbp"] < 90)
@@ -106,12 +97,6 @@ def _mode_effects(
     severity: float,
     rng: np.random.Generator,
 ) -> dict:
-    """
-    Convert deterioration severity into correlated vital-sign effects.
-
-    severity ranges roughly from 0 to 1+.
-    """
-
     effects = {
         "heart_rate": 0.0,
         "resp_rate": 0.0,
@@ -163,7 +148,6 @@ def _mode_effects(
         effects["sbp"] = -25.0 * severity
         effects["dbp"] = -12.0 * severity
 
-    # Small random patient-to-patient variation
     for col in effects:
         effects[col] *= rng.normal(1.0, 0.08)
 
@@ -176,11 +160,6 @@ def _build_forward_target(
     event_col: str = "event_now",
     horizon_steps: int = 12,
 ) -> pd.Series:
-    """
-    Forward-looking target:
-    1 if an event occurs within the next horizon_steps.
-    """
-
     future_events = []
 
     for k in range(1, horizon_steps + 1):
@@ -194,16 +173,9 @@ def _build_forward_target(
 def generate_synthetic_icu_data(
     n_patients: int = 500,
     start_time: str = "2026-01-01 00:00:00",
-    freq: str = "5min",
     random_state: int = 42,
     horizon_steps: int = 12,
 ) -> pd.DataFrame:
-    """
-    Generate synthetic ICU-grade time-series vitals.
-
-    Returns a dataframe compatible with BIRE.
-    """
-
     rng = np.random.default_rng(random_state)
     start_ts = pd.Timestamp(start_time)
 
@@ -225,62 +197,59 @@ def generate_synthetic_icu_data(
 
         will_deteriorate = rng.random() < cfg["deterioration_prob"]
         deterioration_mode = "stable"
-
         deterioration_start_step = None
         event_anchor_step = None
 
-        if will_deteriorate and n_steps > 36:
+        if will_deteriorate and n_steps >= 36:
             deterioration_mode = rng.choice(DETERIORATION_MODES)
 
-            # Deterioration begins before event.
-            # ICU/ER can decline faster; inpatient slower.
-            lead_steps = int(
-                rng.integers(
-                    low=max(12, int(18 / cfg["deterioration_speed"])),
-                    high=max(24, int(36 / cfg["deterioration_speed"])),
-                )
-            )
-            
-            min_event_step = min(lead_steps + 6, max(1, n_steps // 2))
-            max_event_step = max(min_event_step + 1, n_steps - 3)
-            
-            
-            if max_event_step > min_event_step:
+            min_lead_steps = max(12, int(18 / cfg["deterioration_speed"]))
+            max_lead_steps = max(min_lead_steps + 1, int(36 / cfg["deterioration_speed"]))
+
+            lead_steps = int(rng.integers(min_lead_steps, max_lead_steps + 1))
+
+            min_event_step = max(lead_steps + 3, n_steps // 3)
+            max_event_step = n_steps - 3
+
+            if min_event_step < max_event_step:
                 event_anchor_step = int(rng.integers(min_event_step, max_event_step))
                 deterioration_start_step = max(0, event_anchor_step - lead_steps)
-            
             else:
                 will_deteriorate = False
                 deterioration_mode = "stable"
                 deterioration_start_step = None
                 event_anchor_step = None
-            
-    for step in range(n_steps):
-    timestamp = start_ts + pd.Timedelta(minutes=5 * step)
 
-    vitals = baseline.copy()
+        for step in range(n_steps):
+            timestamp = start_ts + pd.Timedelta(minutes=5 * step)
 
-    # Natural circadian-ish variation / drift
-    vitals["heart_rate"] += 3 * np.sin(step / 24)
-    vitals["resp_rate"] += 1.2 * np.sin(step / 18)
-    vitals["temperature"] += 0.15 * np.sin(step / 48)
-    vitals["sbp"] += 4 * np.sin(step / 36)
-    vitals["dbp"] += 2 * np.sin(step / 36)
+            vitals = baseline.copy()
 
-    is_deteriorating = 0
-    severity = 0.0
+            # Natural drift / circadian-style variation
+            vitals["heart_rate"] += 3 * np.sin(step / 24)
+            vitals["resp_rate"] += 1.2 * np.sin(step / 18)
+            vitals["temperature"] += 0.15 * np.sin(step / 48)
+            vitals["sbp"] += 4 * np.sin(step / 36)
+            vitals["dbp"] += 2 * np.sin(step / 36)
 
-    if deterioration_start_step is not None and step >= deterioration_start_step:
-        is_deteriorating = 1
+            is_deteriorating = 0
+            severity = 0.0
+
+            if deterioration_start_step is not None and step >= deterioration_start_step:
+                is_deteriorating = 1
 
                 progress = (step - deterioration_start_step) / max(
-                    1, event_anchor_step - deterioration_start_step
+                    1,
+                    event_anchor_step - deterioration_start_step,
                 )
 
-                # Smooth nonlinear deterioration curve
                 severity = min(1.35, max(0.0, progress ** 1.7))
 
-                effects = _mode_effects(deterioration_mode, severity, rng)
+                effects = _mode_effects(
+                    deterioration_mode=deterioration_mode,
+                    severity=severity,
+                    rng=rng,
+                )
 
                 for col in SIGNAL_COLS:
                     vitals[col] += effects[col]
@@ -294,7 +263,7 @@ def generate_synthetic_icu_data(
             vitals["sbp"] += rng.normal(0, 4.0 * noise_scale)
             vitals["dbp"] += rng.normal(0, 2.5 * noise_scale)
 
-            # Keep values within plausible synthetic bounds
+            # Plausible synthetic bounds
             vitals["heart_rate"] = float(np.clip(vitals["heart_rate"], 40, 170))
             vitals["resp_rate"] = float(np.clip(vitals["resp_rate"], 8, 45))
             vitals["spo2"] = float(np.clip(vitals["spo2"], 70, 100))
@@ -330,8 +299,6 @@ def generate_synthetic_icu_data(
 
 
 def summarize_synthetic_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Quick summary for notebook inspection."""
-
     summary = {
         "n_rows": len(df),
         "n_patients": df["patient_id"].nunique(),
@@ -345,8 +312,6 @@ def summarize_synthetic_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def summarize_by_care_mode(df: pd.DataFrame) -> pd.DataFrame:
-    """Summarize synthetic data by BMS care mode."""
-
     return (
         df.groupby("care_mode")
         .agg(
@@ -362,8 +327,6 @@ def summarize_by_care_mode(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def summarize_by_deterioration_mode(df: pd.DataFrame) -> pd.DataFrame:
-    """Summarize synthetic data by deterioration mode."""
-
     return (
         df.groupby("deterioration_mode")
         .agg(
