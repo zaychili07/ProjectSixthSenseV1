@@ -1352,20 +1352,22 @@ def apply_gss_with_delta_override(
                         reasons.append("spo2_delta_drop")
 
                 if "sbp_delta" in out.columns:
-                    if pd.notna(out.at[idx, "sbp_delta"]) and out.at[idx, "sbp_delta"] <= sbp_delta_drop:
+                    if is_persistent(out, idx, "sbp_delta", sbp_delta_drop, "drop", steps=2):
                         reasons.append("sbp_delta_drop")
 
-                if "resp_rate_delta" in out.columns:
-                    if pd.notna(out.at[idx, "resp_rate_delta"]) and out.at[idx, "resp_rate_delta"] >= resp_rate_delta_rise:
-                        reasons.append("resp_rate_delta_rise")
-
+               if "resp_rate_delta" in out.columns:
+                   if is_persistent(out, idx, "resp_rate_delta", resp_rate_delta_rise, "rise", steps=2):
+                       reasons.append("resp_rate_delta_rise")
+                       
                 if "heart_rate_delta" in out.columns:
-                    if pd.notna(out.at[idx, "heart_rate_delta"]) and out.at[idx, "heart_rate_delta"] >= heart_rate_delta_rise:
+                    if is_persistent(out, idx, "heart_rate_delta", heart_rate_rise, "rise", steps = 2):
                         reasons.append("heart_rate_delta_rise")
 
                 if "temperature_delta" in out.columns:
-                    if pd.notna(out.at[idx, "temperature_delta"]) and abs(out.at[idx, "temperature_delta"]) >= temp_delta_worsen:
+                    if is_persistent(out, idx, "temperature_delta", temp_delta_worsen, "rise", steps=2):
                         reasons.append("temp_delta_worsen")
+
+            
 
                 if event_col in out.columns and bool(out.at[idx, event_col]):
                     if not reasons:
