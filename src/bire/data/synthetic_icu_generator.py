@@ -256,9 +256,8 @@ def generate_synthetic_icu_data(
             deterioration_start_step = None
             event_anchor_step = None
             
-        for step in range(n_steps):
-            
-            timestamp = start_ts + pd.Timedelta(minutes=5 * step)
+    for step in range(n_steps):
+        timestamp = start_ts + pd.Timedelta(minutes=5 * step)
 
             vitals = baseline.copy()
 
