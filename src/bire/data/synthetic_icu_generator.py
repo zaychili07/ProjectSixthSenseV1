@@ -252,7 +252,7 @@ else:
     deterioration_mode = "stable"
     deterioration_start_step = None
     event_anchor_step = None
-
+    
         for step in range(n_steps):
             timestamp = start_ts + pd.Timedelta(minutes=5 * step)
 
