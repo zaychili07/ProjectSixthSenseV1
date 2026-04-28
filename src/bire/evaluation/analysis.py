@@ -1290,6 +1290,8 @@ def apply_gss_with_delta_override(
     risk_signal_weight=2, # added for GSS 2.5 signal strength scoring 
     delta_signal_weight=1, #2.5
     min_signal_score=2, # and 2.5
+    early_warning_risk_threshold = 0.35,
+    early_warning_risk_delta = 0.05,
 ):
     """
     GSS v2.2 — Delta-Based Override with Multi-Signal Confirmation.
@@ -1394,12 +1396,13 @@ def apply_gss_with_delta_override(
             out.at[idx, signal_score_col] = signal_score # addeed for v2.5
 
             early_warning = (
-                current_risk > 0.35
-                and (current_risk - last_alert_risk) > 0.05
+                last_alert_risk is not None
+                and current_risk >= early_warning_risk_threshold
+                and (current_risk - last_alert_risk) >= early_warning_risk_delta
 )
             should_fire = (                              # Early Escalation Rule
                 "initial_alert" in reasons
-                or len(risk_signals) > 0
+                or signal_score >= min_signal_score
                 or len(delta_signals) >= min_delta_signals
                 or early_warning
 )                # this will modify firing  ↑
@@ -1427,9 +1430,12 @@ def apply_gss_with_delta_override(
                 continue
 
             if should_fire:
-                out.at[idx, gss_alert_col] = True
-                last_gss_alert_idx = idx
-                out.at[idx, escalation_col] = True
+                if "initial_alert" in reasons:
+                out.at[idx, escalation_reason_col] = "initial_alert"
+            elif early_warning:
+                out.at[idx, escalation_reason_col] = "early_warning_risk_rise"
+            else:
+                out.at[idx, escalation_reason_col] = "+".join(risk_signals + delta_signals)
 
                 if "initial_alert" in reasons:
                     out.at[idx, escalation_reason_col] = "initial_alert"
