@@ -1287,6 +1287,9 @@ def apply_gss_with_delta_override(
     min_delta_signals=2,
     delta_persistence_steps = 1,
     min_alert_spacing_steps = 2,
+    risk_signal_weight=2, # added for GSS 2.5 signal strength scoring 
+    delta_signal_weight=1, #2.5
+    min_signal_score=2, # and 2.5
 ):
     """
     GSS v2.2 — Delta-Based Override with Multi-Signal Confirmation.
@@ -1313,6 +1316,10 @@ def apply_gss_with_delta_override(
     out[suppressed_col] = False
     out[escalation_col] = False
     out[escalation_reason_col] = "no_alert"
+
+    # NEW v2.5
+    signal_score_col = escalation_reason_col.replace("reason", "score")
+    out[signal_score_col] = 0
 
     delta_signal_names = [
         "spo2_delta_drop",
@@ -1379,11 +1386,18 @@ def apply_gss_with_delta_override(
             delta_signals = [r for r in reasons if r in delta_signal_names]
             risk_signals = [r for r in reasons if r in risk_signal_names]
 
+            signal_score = (
+                risk_signal_weight * len(risk_signals)
+                + delta_signal_weight * len(delta_signals)
+                
+)
+            out.at[idx, signal_score_col] = signal_score # addeed for v2.5
+            
             should_fire = (
                 "initial_alert" in reasons
-                or len(risk_signals) > 0
+                or signal_score >= min_signal_score
                 or len(delta_signals) >= min_delta_signals
-            )
+)
             
 
             # =========================
