@@ -1244,6 +1244,28 @@ def apply_gss_with_vital_override(
 
     return out
 
+# ============================================================
+# Temporal Persistence Helper (GSS v2.3)
+# ============================================================
+
+def is_persistent(df, idx, col, threshold, direction, steps=2):
+    """
+    Check if a signal persists over N timesteps.
+    direction: "rise" or "drop"
+    """
+    if idx - (steps - 1) < 0:
+        return False
+
+    values = df.loc[idx - (steps - 1):idx, col]
+
+    if direction == "rise":
+        return all(values >= threshold)
+    elif direction == "drop":
+        return all(values <= threshold)
+
+    return False
+
+
 def apply_gss_with_delta_override(
     df,
     prob_col="pred_proba",
@@ -1326,7 +1348,7 @@ def apply_gss_with_delta_override(
                     reasons.append("risk_delta_break")
 
                 if "spo2_delta" in out.columns:
-                    if pd.notna(out.at[idx, "spo2_delta"]) and out.at[idx, "spo2_delta"] <= spo2_delta_drop:
+                    if is_persistent(out, idx, "spo2_delta", spo2_delta_drop, "drop", steps=2):
                         reasons.append("spo2_delta_drop")
 
                 if "sbp_delta" in out.columns:
