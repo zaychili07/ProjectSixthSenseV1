@@ -1360,7 +1360,7 @@ def apply_gss_with_delta_override(
                        reasons.append("resp_rate_delta_rise")
                        
                 if "heart_rate_delta" in out.columns:
-                    if is_persistent(out, idx, "heart_rate_delta", heart_rate_rise, "rise", steps = 2):
+                    if is_persistent(out, idx, "heart_rate_delta_rise", heart_rate_rise, "rise", steps = 2):
                         reasons.append("heart_rate_delta_rise")
 
                 if "temperature_delta" in out.columns:
