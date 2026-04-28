@@ -1278,7 +1278,7 @@ def apply_gss_with_delta_override(
     escalation_col="gss_v22_escalation",
     escalation_reason_col="gss_v22_escalation_reason",
     risk_delta=0.013,
-    escalation_threshold=0.995,
+    escalation_threshold=0.997,
     spo2_delta_drop=-0.5,
     sbp_delta_drop=-2.0,
     resp_rate_delta_rise=1.0,
