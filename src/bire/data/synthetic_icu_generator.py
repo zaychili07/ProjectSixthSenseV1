@@ -256,22 +256,22 @@ def generate_synthetic_icu_data(
                 event_anchor_step = None
             
     for step in range(n_steps):
-        timestamp = start_ts + pd.Timedelta(minutes=5 * step)
+    timestamp = start_ts + pd.Timedelta(minutes=5 * step)
 
-            vitals = baseline.copy()
+    vitals = baseline.copy()
 
-            # Natural circadian-ish variation / drift
-            vitals["heart_rate"] += 3 * np.sin(step / 24)
-            vitals["resp_rate"] += 1.2 * np.sin(step / 18)
-            vitals["temperature"] += 0.15 * np.sin(step / 48)
-            vitals["sbp"] += 4 * np.sin(step / 36)
-            vitals["dbp"] += 2 * np.sin(step / 36)
+    # Natural circadian-ish variation / drift
+    vitals["heart_rate"] += 3 * np.sin(step / 24)
+    vitals["resp_rate"] += 1.2 * np.sin(step / 18)
+    vitals["temperature"] += 0.15 * np.sin(step / 48)
+    vitals["sbp"] += 4 * np.sin(step / 36)
+    vitals["dbp"] += 2 * np.sin(step / 36)
 
-            is_deteriorating = 0
-            severity = 0.0
+    is_deteriorating = 0
+    severity = 0.0
 
-            if deterioration_start_step is not None and step >= deterioration_start_step:
-                is_deteriorating = 1
+    if deterioration_start_step is not None and step >= deterioration_start_step:
+        is_deteriorating = 1
 
                 progress = (step - deterioration_start_step) / max(
                     1, event_anchor_step - deterioration_start_step
