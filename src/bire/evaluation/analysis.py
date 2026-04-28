@@ -1285,6 +1285,7 @@ def apply_gss_with_delta_override(
     heart_rate_delta_rise=2.0,
     temp_delta_worsen=0.2,
     min_delta_signals=2,
+    delta_persistence_steps = 1,
 ):
     """
     GSS v2.2 — Delta-Based Override with Multi-Signal Confirmation.
