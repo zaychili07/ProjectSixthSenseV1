@@ -1286,6 +1286,7 @@ def apply_gss_with_delta_override(
     temp_delta_worsen=0.2,
     min_delta_signals=2,
     delta_persistence_steps = 1,
+    min_alert_spacing_steps = 2,
 ):
     """
     GSS v2.2 — Delta-Based Override with Multi-Signal Confirmation.
@@ -1328,6 +1329,7 @@ def apply_gss_with_delta_override(
 
     for patient_id, group in out.groupby(patient_col, sort=False):
         last_alert_risk = None
+        last_gss_alert_idx = None # Tracks last GSS alert positions
 
         for idx in group.index:
             is_alert = bool(out.at[idx, alert_col])
@@ -1382,9 +1384,32 @@ def apply_gss_with_delta_override(
                 or len(risk_signals) > 0
                 or len(delta_signals) >= min_delta_signals
             )
+            
+
+            # =========================
+            # GSS v2.4 — Alert Spacing
+            # =========================
+
+            recent_gss_alert = (
+                last_gss_alert_idx is not None
+                and (idx - last_gss_alert_idx) < min_alert_spacing_steps
+            )
+
+            critical_override = (
+                "risk_delta_break" in reasons
+                or "escalation_threshold" in reasons
+                or "event_now_override" in reasons
+            )
+
+            if recent_gss_alert and not critical_override:
+                out.at[idx, gss_alert_col] = False
+                out.at[idx, suppressed_col] = True
+                out.at[idx, escalation_reason_col] = "suppressed_recent_gss_alert"
+                continue
 
             if should_fire:
                 out.at[idx, gss_alert_col] = True
+                last_gss_alert_idx = idx
                 out.at[idx, escalation_col] = True
 
                 if "initial_alert" in reasons:
@@ -1396,6 +1421,7 @@ def apply_gss_with_delta_override(
 
             elif "event_now_override" in reasons:
                 out.at[idx, gss_alert_col] = True
+                last_gss_alert_idx = idx
                 out.at[idx, escalation_col] = True
                 out.at[idx, escalation_reason_col] = "event_now_fallback"
                 last_alert_risk = current_risk
