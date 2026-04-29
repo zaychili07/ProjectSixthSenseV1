@@ -1434,13 +1434,35 @@ def apply_gss_with_delta_override(
                 continue
 
             if should_fire:
-                 ## UPDATED THE SHOULD_FIRES FROM 2.7 LOGIC TO V3.0 LOGIC
+              # GSS v3.0 update ESCALATION AWARE POST EVENT SUPRESSION SYSTEM
                 if event_col in out.columns and bool(out.at[idx, event_col]):
+                    post_event_risk_escalation = (
+                        post_event_escalation_enabled
+                        and last_alert_risk is not None
+                        and (current_risk - last_alert_risk) >= post_event_risk_delta
+                    )
+
+                    post_event_signal_escalation = (
+                        post_event_escalation_enabled
+                        and len(delta_signals) >= post_event_min_delta_signals
+                    )
+
+                    if post_event_risk_escalation or post_event_signal_escalation:
+                        out.at[idx, gss_alert_col] = True
+                        out.at[idx, suppressed_col] = False
+                        out.at[idx, escalation_col] = True
+                        out.at[idx, escalation_reason_col] = "post_event_escalation_break"
+
+                        last_gss_alert_idx = idx
+                        last_alert_risk = current_risk
+                        continue
+
                     out.at[idx, gss_alert_col] = False
                     out.at[idx, suppressed_col] = True
                     out.at[idx, escalation_col] = False
                     out.at[idx, escalation_reason_col] = "suppressed_post_event"
                     continue
+                    
                 
                 if "initial_alert" in reasons:
                     out.at[idx, escalation_reason_col] = "initial_alert"
