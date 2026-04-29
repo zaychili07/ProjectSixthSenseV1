@@ -1657,3 +1657,20 @@ def build_gss_decision_context(
     context_cols = [c for c in context_cols if c in out.columns]
 
     return out[context_cols].copy()
+
+def add_stable_event_signal(
+    df,
+    event_col="event_now",
+    patient_col="patient_id",
+    output_col="event_now_stable",
+    persistence_window=3,
+):
+    out = df.copy()
+
+    out[output_col] = (
+        out.groupby(patient_col)[event_col]
+        .transform(lambda x: x.rolling(window=persistence_window, min_periods=1).max())
+        .astype(int)
+    )
+
+    return out
