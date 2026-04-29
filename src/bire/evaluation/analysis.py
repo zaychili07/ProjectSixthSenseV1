@@ -1294,8 +1294,8 @@ def apply_gss_with_delta_override(
     early_warning_risk_threshold = 0.35,
     early_warning_risk_delta = 0.05,
     post_event_escalation_enabled: bool = True,
-    post_event_risk_delta: float = 0.03,
-    post_event_min_delta_signals: int = 3,
+    post_event_risk_delta: float = 0.005, #OG values are 0.03
+    post_event_min_delta_signals: int = 1, # Og value was 3 ... using these values for comparrison
 ):
     """
     GSS v2.2 — Delta-Based Override with Multi-Signal Confirmation.
