@@ -1109,6 +1109,7 @@ def apply_gss_with_vital_override(
     resp_rate_rise = 2.0,
     heart_rate_rise = 5.0,
     temp_rise = 0.3,
+   
     
 ):
     """
@@ -1292,6 +1293,9 @@ def apply_gss_with_delta_override(
     min_signal_score=2, # and 2.5
     early_warning_risk_threshold = 0.35,
     early_warning_risk_delta = 0.05,
+    post_event_escalation_enabled: bool = True,
+    post_event_risk_delta: float = 0.03,
+    post_event_min_delta_signals: int = 3,
 ):
     """
     GSS v2.2 — Delta-Based Override with Multi-Signal Confirmation.
@@ -1430,13 +1434,12 @@ def apply_gss_with_delta_override(
                 continue
 
             if should_fire:
-                 # 🚨 GSS v2.7 — Post-event suppression (PUT HERE)
+                 ## UPDATED THE SHOULD_FIRES FROM 2.7 LOGIC TO V3.0 LOGIC
                 if event_col in out.columns and bool(out.at[idx, event_col]):
                     out.at[idx, gss_alert_col] = False
                     out.at[idx, suppressed_col] = True
                     out.at[idx, escalation_col] = False
                     out.at[idx, escalation_reason_col] = "suppressed_post_event"
-                    
                     continue
                 
                 if "initial_alert" in reasons:
