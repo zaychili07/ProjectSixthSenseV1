@@ -66,7 +66,7 @@ Clinical Interpretation: one concise sentence explaining what the timing and sys
 Next Step: one cautious sentence recommending monitoring or reassessment.
 Limitation: one sentence stating that this is supportive model output and not a diagnosis or treatment recommendation.
 
-Keep total output under 160 words.
+Keep total output under 210 words.
 """
 
 def build_bire_gss_output(row):
