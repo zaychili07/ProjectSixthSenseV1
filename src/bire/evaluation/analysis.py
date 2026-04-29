@@ -1581,3 +1581,54 @@ def summarize_alert_timing(
         "early_beyond_60_rate": early_beyond_60 / total_alerts,
         "no_event_for_patient_rate": no_event / total_alerts,
     }])
+
+def build_gss_decision_context(
+    df,
+    alert_col="gss_v27_alert",
+    suppressed_col="gss_v27_suppressed",
+    reason_col="gss_v27_escalation_reason",
+    timing_col="timing_category",
+    risk_col="pred_proba",
+    patient_col="patient_id",
+    time_col="timestamp",
+):
+    """
+    Build AI/BMS-ready decision context from GSS outputs.
+    """
+    out = df.copy()
+
+    def classify_action(row):
+        if row.get(alert_col, False):
+            return "notify_clinician"
+        if row.get(suppressed_col, False):
+            return "suppress_redundant_alert"
+        return "continue_monitoring"
+
+    def classify_priority(row):
+        risk = row.get(risk_col, 0)
+
+        if row.get(alert_col, False) and risk >= 0.90:
+            return "high"
+        if row.get(alert_col, False):
+            return "moderate"
+        if row.get(suppressed_col, False):
+            return "low"
+        return "routine"
+
+    out["gss_action"] = out.apply(classify_action, axis=1)
+    out["gss_priority"] = out.apply(classify_priority, axis=1)
+
+    context_cols = [
+        patient_col,
+        time_col,
+        risk_col,
+        alert_col,
+        suppressed_col,
+        reason_col,
+        "gss_action",
+        "gss_priority",
+    ]
+
+    context_cols = [c for c in context_cols if c in out.columns]
+
+    return out[context_cols].copy()
