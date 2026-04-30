@@ -18,7 +18,7 @@ def load_gemma_explainer():
 
     gemma_model = AutoModelForMultimodalLM.from_pretrained(
         GEMMA_MODEL_ID,
-        dtype="auto",
+        torch_dtype="auto",
         device_map="auto",
     )
 
