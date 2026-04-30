@@ -1434,8 +1434,10 @@ def apply_gss_with_delta_override(
                 continue
 
             if should_fire:
-              # GSS v3.0 update ESCALATION AWARE POST EVENT SUPRESSION SYSTEM
+
+                # GSS v3.1 — stricter post-event gating
                 if event_col in out.columns and bool(out.at[idx, event_col]):
+                    
                     post_event_risk_escalation = (
                         post_event_escalation_enabled
                         and last_alert_risk is not None
@@ -1443,25 +1445,24 @@ def apply_gss_with_delta_override(
                     )
 
                     post_event_signal_escalation = (
-                        post_event_escalation_enabled
-                        and len(delta_signals) >= post_event_min_delta_signals
+                        delta_signal_count >= post_event_min_delta_signals
                     )
 
-                    if post_event_risk_escalation or post_event_signal_escalation:
-                        out.at[idx, gss_alert_col] = True
-                        out.at[idx, suppressed_col] = False
-                        out.at[idx, escalation_col] = True
-                        out.at[idx, escalation_reason_col] = "post_event_escalation_break"
+                    if not (post_event_risk_escalation and post_event_signal_escalation):
+                        should_fire = False
+                        out.at[idx, gss_alert_col] = False
+                        out.at[idx, suppressed_col] = True
+                        out.at[idx, escalation_col] = False
+                        out.at[idx, escalation_reason_col] = "suppressed_post_event"
 
                         last_gss_alert_idx = idx
                         last_alert_risk = current_risk
                         continue
 
-                    out.at[idx, gss_alert_col] = False
-                    out.at[idx, suppressed_col] = True
-                    out.at[idx, escalation_col] = False
-                    out.at[idx, escalation_reason_col] = "suppressed_post_event"
-                    continue
+                out.at[idx, gss_alert_col] = True
+                out.at[idx, suppressed_col] = False
+                out.at[idx, escalation_col] = True
+
                     
                 
                 if "initial_alert" in reasons:
