@@ -1544,16 +1544,33 @@ def audit_alert_timing(
             continue
 
         deltas = (patient_events - alert_time).dt.total_seconds() / 60.0
-        nearest_idx = deltas.abs().idxmin()
-        nearest_delta = deltas.loc[nearest_idx]
-        nearest_event_time = patient_events.loc[nearest_idx]
 
-        if 0 <= nearest_delta <= prediction_window_minutes:
-            timing_category = "true_predictive_alert"
-        elif nearest_delta > prediction_window_minutes:
-            timing_category = "early_beyond_60_alert"
+        # Forward-looking event timing
+        future_deltas = deltas[deltas >= 0]
+
+        if len(future_deltas) > 0:
+            nearest_idx = future_deltas.idxmin()
+            nearest_delta = future_deltas.loc[nearest_idx]
+            nearest_event_time = patient_events.loc[nearest_idx]
+
+            if nearest_delta <= prediction_window_minutes:
+                timing_category = "true_predictive_alert"
+            else:
+                timing_category = "early_beyond_60_alert"
+
         else:
-            timing_category = "post_event_alert"
+            past_deltas = deltas[deltas < 0]
+
+            if len(past_deltas) > 0:
+                nearest_idx = past_deltas.abs().idxmin()
+                nearest_delta = past_deltas.loc[nearest_idx]
+                nearest_event_time = patient_events.loc[nearest_idx]
+                timing_category = "post_event_alert"
+            else:
+                nearest_delta = np.nan
+                nearest_event_time = pd.NaT
+                timing_category = "no_event_for_patient"
+                   
 
         rows.append({
             "patient_id": patient_id,
