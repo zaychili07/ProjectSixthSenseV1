@@ -1445,7 +1445,8 @@ def apply_gss_with_delta_override(
                     )
 
                     post_event_signal_escalation = (
-                        delta_signal_count >= post_event_min_delta_signals
+                        len(delta_signals) + len(risk_signals) >= post_event_min_delta_signals
+)
                     )
 
                     if not (post_event_risk_escalation and post_event_signal_escalation):
