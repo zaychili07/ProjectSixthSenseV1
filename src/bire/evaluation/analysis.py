@@ -1692,3 +1692,60 @@ def add_stable_event_signal(
     )
 
     return out
+
+def get_bms_mode_config(mode: str) -> dict:
+    """
+    Return mode-specific alerting configuration for BIRE/GSS.
+    """
+
+    configs = {
+        "icu": {
+            "risk_threshold": 0.50,
+            "early_warning_risk_threshold": 0.65,
+            "post_event_min_delta_signals": 3,
+            "persistence_window": 3,
+            "min_alert_spacing_steps": 2,
+            "description": "High-acuity continuous monitoring with stricter post-event re-alerting.",
+        },
+
+        "er_critical": {
+            "risk_threshold": 0.40,
+            "early_warning_risk_threshold": 0.55,
+            "post_event_min_delta_signals": 2,
+            "persistence_window": 2,
+            "min_alert_spacing_steps": 1,
+            "description": "High-sensitivity emergency mode for unstable or high-risk patients.",
+        },
+
+        "er_observation": {
+            "risk_threshold": 0.55,
+            "early_warning_risk_threshold": 0.70,
+            "post_event_min_delta_signals": 3,
+            "persistence_window": 3,
+            "min_alert_spacing_steps": 3,
+            "description": "Balanced ER observation mode to reduce unnecessary interruptions.",
+        },
+
+        "inpatient_floor": {
+            "risk_threshold": 0.60,
+            "early_warning_risk_threshold": 0.75,
+            "post_event_min_delta_signals": 3,
+            "persistence_window": 4,
+            "min_alert_spacing_steps": 4,
+            "description": "Lower-acuity inpatient monitoring with stronger noise reduction.",
+        },
+
+        "scheduled_visit": {
+            "risk_threshold": 0.75,
+            "early_warning_risk_threshold": 0.85,
+            "post_event_min_delta_signals": 4,
+            "persistence_window": 2,
+            "min_alert_spacing_steps": 6,
+            "description": "Non-acute screening mode; alerts only for strong deterioration patterns.",
+        },
+    }
+
+    if mode not in configs:
+        raise ValueError(f"Unknown BMS mode: {mode}. Available modes: {list(configs.keys())}")
+
+    return configs[mode]
