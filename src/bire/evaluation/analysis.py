@@ -1708,14 +1708,14 @@ def get_bms_mode_config(mode: str) -> dict:
             "description": "High-acuity continuous monitoring with stricter post-event re-alerting.",
         },
 
-        "er_critical": {
-            "risk_threshold": 0.40,
-            "early_warning_risk_threshold": 0.55,
-            "post_event_min_delta_signals": 2,
+       "er_critical": {
+            "risk_threshold": 0.35,
+            "early_warning_risk_threshold": 0.50,
+            "post_event_min_delta_signals": 1,
             "persistence_window": 2,
-            "min_alert_spacing_steps": 1,
+            "min_alert_spacing_steps": 0,
             "description": "High-sensitivity emergency mode for unstable or high-risk patients.",
-        },
+}
 
         "er_observation": {
             "risk_threshold": 0.55,
