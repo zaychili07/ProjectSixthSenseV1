@@ -3,14 +3,14 @@ import pandas as pd
 
 def gss_v3_decision(
     row,
-    high_short_risk: float = 0.85,
-    high_mid_risk: float = 0.75,
-    high_long_risk: float = 0.70,
+    high_short_risk: float = 0.90,        # was 0.85
+    high_mid_risk: float = 0.80,          # was 0.75
+    high_long_risk: float = 0.75,         # was 0.70
     watch_long_risk: float = 0.45,
-    convergence_threshold: float = 0.03,
+    convergence_threshold: float = 0.025, # was 0.03
     spread_threshold: float = 0.12,
-    velocity_escalate: float = 0.02,
-    acceleration_escalate: float = 0.01,
+    velocity_escalate: float = 0.025,     # was 0.02
+    acceleration_escalate: float = 0.0125, # was 0.01
     velocity_watch: float = 0.0075,
 ):
     """
