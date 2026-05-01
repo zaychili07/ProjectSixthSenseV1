@@ -7,81 +7,116 @@ from xgboost import XGBClassifier
 from bire.evaluation.metrics import evaluate_multiple_splits
 
 
-def patient_level_split(df, random_state: int = 42):
+def patient_level_split(
+    df,
+    patient_col: str = "patient_id",
+    target_col: str = "target",
+    test_size: float = 0.2,
+    val_size: float | None = None,
+    random_state: int = 42,
+):
     """
-    Patient-level train/val/test split with stratification on patient-level
-    target presence to avoid leakage and reduce risk of single-class splits.
+    Patient-level split to prevent leakage across patients.
+
+    Supports both:
+    - V1 binary target: target
+    - V2 horizon targets: target_15min, target_30min, target_60min
+
+    If val_size is None:
+        returns train_df, test_df
+
+    If val_size is provided:
+        returns train_df, val_df, test_df
     """
-    required_cols = {"patient_id", "target"}
+
+    from sklearn.model_selection import train_test_split
+
+    required_cols = {patient_col, target_col}
     missing = required_cols - set(df.columns)
+
     if missing:
-        raise ValueError(f"patient_level_split missing required columns: {sorted(missing)}")
+        raise ValueError(
+            f"patient_level_split missing required columns: {sorted(missing)}"
+        )
 
     patient_summary = (
-        df.groupby("patient_id", as_index=False)["target"]
+        df.groupby(patient_col, as_index=False)[target_col]
         .max()
-        .rename(columns={"target": "any_target"})
+        .rename(columns={target_col: "any_target"})
     )
 
     if patient_summary.empty:
         raise ValueError("No patients available for splitting.")
 
-    if patient_summary["any_target"].nunique() < 2:
-        raise ValueError(
-            "Patient-level target summary has only one class. "
-            f"Counts: {patient_summary['any_target'].value_counts(dropna=False).to_dict()}"
-        )
+    patients = patient_summary[patient_col]
+    stratify_labels = patient_summary["any_target"]
 
-    patient_class_counts = patient_summary["any_target"].value_counts()
-    min_class_count = patient_class_counts.min()
-
-    if len(patient_summary) < 3:
-        raise ValueError(
-            "Need at least 3 patients to create train/val/test splits."
-        )
-
-    train_stratify = patient_summary["any_target"] if min_class_count >= 2 else None
-
-    train_p, temp_p = train_test_split(
-        patient_summary["patient_id"],
-        test_size=0.4,
-        random_state=random_state,
-        stratify=train_stratify,
+    stratify = (
+        stratify_labels
+        if stratify_labels.nunique() >= 2 and stratify_labels.value_counts().min() >= 2
+        else None
     )
 
-    temp_summary = patient_summary[patient_summary["patient_id"].isin(temp_p)].copy()
+    train_patients, test_patients = train_test_split(
+        patients,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=stratify,
+    )
 
-    if temp_summary["any_target"].nunique() < 2:
-        raise ValueError(
-            "Temp patient split has only one class. "
-            "Increase positive patients or adjust split strategy."
-        )
+    if val_size is None:
+        train_df = df[df[patient_col].isin(train_patients)].copy()
+        test_df = df[df[patient_col].isin(test_patients)].copy()
 
-    temp_class_counts = temp_summary["any_target"].value_counts()
-    temp_min_class_count = temp_class_counts.min()
-    temp_stratify = temp_summary["any_target"] if temp_min_class_count >= 2 else None
+        overlap = set(train_df[patient_col]).intersection(set(test_df[patient_col]))
+        if overlap:
+            raise ValueError("Patient leakage detected between train and test.")
 
-    val_p, test_p = train_test_split(
-        temp_summary["patient_id"],
-        test_size=0.5,
+        return train_df, test_df
+
+    temp_summary = patient_summary[
+        patient_summary[patient_col].isin(train_patients)
+    ].copy()
+
+    temp_stratify_labels = temp_summary["any_target"]
+
+    temp_stratify = (
+        temp_stratify_labels
+        if temp_stratify_labels.nunique() >= 2
+        and temp_stratify_labels.value_counts().min() >= 2
+        else None
+    )
+
+    adjusted_val_size = val_size / (1 - test_size)
+
+    final_train_patients, val_patients = train_test_split(
+        temp_summary[patient_col],
+        test_size=adjusted_val_size,
         random_state=random_state,
         stratify=temp_stratify,
     )
 
-    train_df = df[df["patient_id"].isin(train_p)].copy()
-    val_df = df[df["patient_id"].isin(val_p)].copy()
-    test_df = df[df["patient_id"].isin(test_p)].copy()
+    train_df = df[df[patient_col].isin(final_train_patients)].copy()
+    val_df = df[df[patient_col].isin(val_patients)].copy()
+    test_df = df[df[patient_col].isin(test_patients)].copy()
 
-    for split_name, split_df in {
-        "train": train_df,
-        "val": val_df,
-        "test": test_df,
-    }.items():
-        if split_df.empty:
-            raise ValueError(f"{split_name} split is empty.")
+    patient_sets = {
+        "train": set(train_df[patient_col]),
+        "val": set(val_df[patient_col]),
+        "test": set(test_df[patient_col]),
+    }
+
+    if patient_sets["train"] & patient_sets["val"]:
+        raise ValueError("Patient leakage detected between train and val.")
+
+    if patient_sets["train"] & patient_sets["test"]:
+        raise ValueError("Patient leakage detected between train and test.")
+
+    if patient_sets["val"] & patient_sets["test"]:
+        raise ValueError("Patient leakage detected between val and test.")
 
     return train_df, val_df, test_df
-
+    
 
 def build_logistic_model(random_state: int = 42):
     return LogisticRegression(
