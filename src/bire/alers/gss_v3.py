@@ -45,3 +45,16 @@ def gss_v3_decision(
         return "WATCH"
 
     return "SUPPRESS"
+
+def apply_gss_v3(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Apply GSS V3 to entire dataframe.
+    """
+
+    out = df.copy()
+
+    out["gss_v3_state"] = out.apply(gss_v3_decision, axis=1)
+
+    out["gss_v3_alert"] = (out["gss_v3_state"] == "ESCALATE").astype(int)
+
+    return out
