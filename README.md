@@ -40,7 +40,7 @@ BIRE instead detects **early warning signals hidden in temporal patterns**.
 
 #  System Architecture
 
-![system architechure](outputs/figures/system_diagram.png)
+![system architechure](outputs/figures/system_architechure.png)
 ---
 
 # 📊 Results Snapshot
@@ -189,3 +189,5 @@ Potential outcomes:
 ---
 
 # 🔄 Pipeline Architecture
+
+![pipeline architechure](outputs/figures/pipeline_architechure.png)
