@@ -73,7 +73,7 @@ def compute_detection_metrics(
         event_col=event_col,
     )
 
-    total_events = int(timing_df["event_flag"].sum())
+    total_events = int(timing_df["has_event"].sum())
     true_predictive = int((timing_df["timing_category"] == "true_predictive_alert").sum())
     post_event = int((timing_df["timing_category"] == "post_event_alert").sum())
     missed = int((timing_df["timing_category"] == "no_alert").sum())
