@@ -21,6 +21,21 @@ from sklearn.metrics import brier_score_loss
 # Calibration Model Fitting
 # =========================================================
 
+HORIZONS = {
+    "15min": {
+        "risk_col": "risk_15min",
+        "target_col": "target_15min",
+    },
+    "30min": {
+        "risk_col": "risk_30min",
+        "target_col": "target_30min",
+    },
+    "60min": {
+        "risk_col": "risk_60min",
+        "target_col": "target_60min",
+    },
+}
+
 def fit_platt_calibrator(y_true, y_prob):
     """
     Fit Platt scaling using logistic regression.
