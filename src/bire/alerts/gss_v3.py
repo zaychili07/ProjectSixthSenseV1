@@ -1,5 +1,5 @@
+from bire.alerts.gss_config import MODE_AWARE_GSS_POLICY
 import pandas as pd
-
 
 STATE_ORDER = {
     "SUPPRESS": 0,
@@ -315,16 +315,16 @@ def apply_gss_v3(
 
 def apply_gss_mode_aware(
     df,
-    policy,
-    patient_col="patient_id",
-    time_col="timestamp",
-    risk_col="pred_proba",
-    mode_col="bms_mode",
-    base_alert_col="bms_alert",
-    event_col="event_now",
-    output_alert_col="gss_mode_alert",
-    output_suppressed_col="gss_mode_suppressed",
-    output_reason_col="gss_mode_reason",
+    policy = MODE_AWARE_GSS_POLICY,
+    patient_col = "patient_id",
+    time_col = "timestamp",
+    risk_col = "pred_proba",
+    mode_col = "bms_mode",
+    base_alert_col = "bms_alert",
+    event_col = "event_now",
+    output_alert_col ="gss_mode_alert",
+    output_suppressed_col = "gss_mode_suppressed",
+    output_reason_col = "gss_mode_reason",
 ):
     """
     Mode-aware Gateway Suppression System (GSS)
