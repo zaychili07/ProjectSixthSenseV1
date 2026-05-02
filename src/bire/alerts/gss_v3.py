@@ -1,25 +1,35 @@
 import pandas as pd
 
 
+STATE_ORDER = {
+    "SUPPRESS": 0,
+    "WATCH": 1,
+    "ESCALATE": 2,
+}
+
+
 def gss_v3_decision(
     row,
-    high_short_risk: float = 0.90,        # was 0.85
-    high_mid_risk: float = 0.80,          # was 0.75
-    high_long_risk: float = 0.75,         # was 0.70
+    high_short_risk: float = 0.90,
+    high_mid_risk: float = 0.80,
+    high_long_risk: float = 0.75,
     watch_long_risk: float = 0.45,
-    convergence_threshold: float = 0.025, # was 0.03
+    convergence_threshold: float = 0.025,
     spread_threshold: float = 0.12,
-    velocity_escalate: float = 0.025,     # was 0.02
-    acceleration_escalate: float = 0.0125, # was 0.01
+    velocity_escalate: float = 0.025,
+    acceleration_escalate: float = 0.0125,
     velocity_watch: float = 0.0075,
 ):
     """
-    GSS V3.1 trajectory-aware decision logic.
+    GSS V3.2 base decision logic.
 
-    Design goal:
-    - Avoid instant alerts from isolated spikes.
-    - Escalate only when high risk is supported by horizon agreement
-      or meaningful worsening over time.
+    Produces a raw proposed state:
+    - SUPPRESS
+    - WATCH
+    - ESCALATE
+
+    This function does not smooth state flicker.
+    Smoothing is handled by apply_state_stabilization().
     """
 
     r15 = row["risk_15min"]
@@ -68,14 +78,160 @@ def gss_v3_decision(
     return "SUPPRESS"
 
 
-def apply_gss_v3(df: pd.DataFrame) -> pd.DataFrame:
+def apply_state_stabilization(
+    df: pd.DataFrame,
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    raw_state_col: str = "gss_v3_raw_state",
+    stable_state_col: str = "gss_v3_state",
+    persistence_steps: int = 2,
+    cooldown_steps: int = 2,
+) -> pd.DataFrame:
     """
-    Apply GSS V3.1 to an entire dataframe.
+    Stabilize GSS state transitions per patient.
+
+    Purpose:
+    - Reduce WATCH/SUPPRESS flicker
+    - Prevent isolated spikes from immediately changing state
+    - Require repeated confirmation before state escalation
+    - Preserve clinically meaningful sustained escalation
+
+    Logic:
+    - A proposed higher state must persist for `persistence_steps`
+      consecutive rows before being accepted.
+    - After a state change, cooldown prevents immediate flipping.
     """
+
+    if raw_state_col not in df.columns:
+        raise ValueError(f"Missing required raw state column: {raw_state_col}")
 
     out = df.copy()
+    out[time_col] = pd.to_datetime(out[time_col])
+    out = out.sort_values([patient_col, time_col]).reset_index(drop=True)
 
-    out["gss_v3_state"] = out.apply(gss_v3_decision, axis=1)
-    out["gss_v3_alert"] = (out["gss_v3_state"] == "ESCALATE").astype(int)
+    stabilized_frames = []
+
+    for _, pdf in out.groupby(patient_col, sort=False):
+        pdf = pdf.copy()
+
+        raw_states = pdf[raw_state_col].tolist()
+
+        stable_states = []
+        current_state = "SUPPRESS"
+        candidate_state = None
+        candidate_count = 0
+        cooldown = 0
+
+        for proposed_state in raw_states:
+            proposed_level = STATE_ORDER.get(proposed_state, 0)
+            current_level = STATE_ORDER.get(current_state, 0)
+
+            if cooldown > 0:
+                stable_states.append(current_state)
+                cooldown -= 1
+                continue
+
+            # Same state: stay stable
+            if proposed_state == current_state:
+                candidate_state = None
+                candidate_count = 0
+                stable_states.append(current_state)
+                continue
+
+            # Higher urgency state requires persistence
+            if proposed_level > current_level:
+                if candidate_state == proposed_state:
+                    candidate_count += 1
+                else:
+                    candidate_state = proposed_state
+                    candidate_count = 1
+
+                if candidate_count >= persistence_steps:
+                    current_state = proposed_state
+                    candidate_state = None
+                    candidate_count = 0
+                    cooldown = cooldown_steps
+
+                stable_states.append(current_state)
+                continue
+
+            # Lower urgency transitions are allowed but cooled down
+            if proposed_level < current_level:
+                current_state = proposed_state
+                candidate_state = None
+                candidate_count = 0
+                cooldown = cooldown_steps
+                stable_states.append(current_state)
+                continue
+
+            stable_states.append(current_state)
+
+        pdf[stable_state_col] = stable_states
+        stabilized_frames.append(pdf)
+
+    return pd.concat(stabilized_frames, axis=0).reset_index(drop=True)
+
+
+def apply_gss_v3(
+    df: pd.DataFrame,
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    persistence_steps: int = 2,
+    cooldown_steps: int = 2,
+) -> pd.DataFrame:
+    """
+    Apply GSS V3.2 production decision layer.
+
+    Output columns:
+    - gss_v3_raw_state: immediate unsmoothed decision
+    - gss_v3_raw_alert: raw ESCALATE flag
+    - gss_v3_state: stabilized decision state
+    - gss_v3_alert: stabilized ESCALATE alert flag
+
+    GSS V3.2 adds:
+    - trajectory-aware decision logic
+    - persistence gating
+    - cooldown/state stabilization
+    """
+
+    required_cols = [
+        patient_col,
+        time_col,
+        "risk_15min",
+        "risk_30min",
+        "risk_60min",
+        "risk_spread",
+        "risk_convergence",
+        "risk_velocity",
+        "risk_acceleration",
+    ]
+
+    missing = [col for col in required_cols if col not in df.columns]
+
+    if missing:
+        raise ValueError(f"Missing required columns for GSS V3.2: {missing}")
+
+    out = df.copy()
+    out[time_col] = pd.to_datetime(out[time_col])
+    out = out.sort_values([patient_col, time_col]).reset_index(drop=True)
+
+    out["gss_v3_raw_state"] = out.apply(gss_v3_decision, axis=1)
+    out["gss_v3_raw_alert"] = (
+        out["gss_v3_raw_state"] == "ESCALATE"
+    ).astype(int)
+
+    out = apply_state_stabilization(
+        out,
+        patient_col=patient_col,
+        time_col=time_col,
+        raw_state_col="gss_v3_raw_state",
+        stable_state_col="gss_v3_state",
+        persistence_steps=persistence_steps,
+        cooldown_steps=cooldown_steps,
+    )
+
+    out["gss_v3_alert"] = (
+        out["gss_v3_state"] == "ESCALATE"
+    ).astype(int)
 
     return out
