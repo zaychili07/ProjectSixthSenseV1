@@ -315,7 +315,7 @@ def apply_gss_v3(
 
 def apply_gss_mode_aware(
     df,
-    policy = MODE_AWARE_GSS_POLICY,
+    policy = "MODE_AWARE_GSS_POLICY",
     patient_col = "patient_id",
     time_col = "timestamp",
     risk_col = "pred_proba",
