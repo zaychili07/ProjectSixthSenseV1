@@ -172,6 +172,71 @@ def apply_state_stabilization(
     return pd.concat(stabilized_frames, axis=0).reset_index(drop=True)
 
 
+def apply_watch_persistence_escalation(
+    df: pd.DataFrame,
+    patient_col: str = "patient_id",
+    time_col: str = "timestamp",
+    state_col: str = "gss_v3_state",
+    risk_col: str = "risk_60min",
+    velocity_col: str = "risk_velocity",
+    output_col: str = "gss_v3_state",
+    watch_steps: int = 3,
+    min_watch_risk: float = 0.35,
+    min_velocity: float = -0.005,
+) -> pd.DataFrame:
+    """
+    GSS V3.3 WATCH persistence escalation.
+
+    Purpose:
+    - Convert persistent WATCH states into ESCALATE when risk remains elevated.
+    - Prevent BIRE from detecting early warning but waiting too long to act.
+    - Preserve suppression for transient WATCH spikes.
+
+    Logic:
+    - If WATCH persists for `watch_steps` consecutive rows
+    - AND long-horizon risk remains elevated
+    - AND risk is not clearly improving
+    - THEN convert WATCH to ESCALATE
+    """
+
+    out = df.copy()
+    out[time_col] = pd.to_datetime(out[time_col])
+    out = out.sort_values([patient_col, time_col]).reset_index(drop=True)
+
+    frames = []
+
+    for _, pdf in out.groupby(patient_col, sort=False):
+        pdf = pdf.copy()
+
+        watch_run = 0
+        adjusted_states = []
+
+        for _, row in pdf.iterrows():
+            state = row[state_col]
+            risk = row[risk_col]
+            velocity = row[velocity_col]
+
+            velocity = 0 if pd.isna(velocity) else velocity
+
+            if state == "WATCH":
+                watch_run += 1
+            else:
+                watch_run = 0
+
+            persistent_watch = watch_run >= watch_steps
+            elevated_risk = risk >= min_watch_risk
+            not_improving = velocity >= min_velocity
+
+            if persistent_watch and elevated_risk and not_improving:
+                adjusted_states.append("ESCALATE")
+            else:
+                adjusted_states.append(state)
+
+        pdf[output_col] = adjusted_states
+        frames.append(pdf)
+
+    return pd.concat(frames, axis=0).reset_index(drop=True)
+
 def apply_gss_v3(
     df: pd.DataFrame,
     patient_col: str = "patient_id",
@@ -180,18 +245,13 @@ def apply_gss_v3(
     cooldown_steps: int = 2,
 ) -> pd.DataFrame:
     """
-    Apply GSS V3.2 production decision layer.
+    Apply GSS V3.3 production decision layer.
 
     Output columns:
-    - gss_v3_raw_state: immediate unsmoothed decision
-    - gss_v3_raw_alert: raw ESCALATE flag
-    - gss_v3_state: stabilized decision state
-    - gss_v3_alert: stabilized ESCALATE alert flag
-
-    GSS V3.2 adds:
-    - trajectory-aware decision logic
-    - persistence gating
-    - cooldown/state stabilization
+    - gss_v3_raw_state
+    - gss_v3_raw_alert
+    - gss_v3_state
+    - gss_v3_alert
     """
 
     required_cols = [
@@ -209,17 +269,19 @@ def apply_gss_v3(
     missing = [col for col in required_cols if col not in df.columns]
 
     if missing:
-        raise ValueError(f"Missing required columns for GSS V3.2: {missing}")
+        raise ValueError(f"Missing required columns for GSS V3.3: {missing}")
 
     out = df.copy()
     out[time_col] = pd.to_datetime(out[time_col])
     out = out.sort_values([patient_col, time_col]).reset_index(drop=True)
 
+    # Step 1: raw row-level decision
     out["gss_v3_raw_state"] = out.apply(gss_v3_decision, axis=1)
     out["gss_v3_raw_alert"] = (
         out["gss_v3_raw_state"] == "ESCALATE"
     ).astype(int)
 
+    # Step 2: stabilize state transitions
     out = apply_state_stabilization(
         out,
         patient_col=patient_col,
@@ -230,6 +292,21 @@ def apply_gss_v3(
         cooldown_steps=cooldown_steps,
     )
 
+    # Step 3: convert persistent WATCH into earlier ESCALATE when appropriate
+    out = apply_watch_persistence_escalation(
+        out,
+        patient_col=patient_col,
+        time_col=time_col,
+        state_col="gss_v3_state",
+        risk_col="risk_60min",
+        velocity_col="risk_velocity",
+        output_col="gss_v3_state",
+        watch_steps=3,
+        min_watch_risk=0.35,
+        min_velocity=-0.005,
+    )
+
+    # Step 4: final stabilized alert flag
     out["gss_v3_alert"] = (
         out["gss_v3_state"] == "ESCALATE"
     ).astype(int)
