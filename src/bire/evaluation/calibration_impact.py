@@ -167,3 +167,31 @@ def build_calibration_impact_report(
             event_col=event_col,
         ),
     }
+
+
+def build_timing_results(
+    raw_gss_df,
+    platt_gss_df,
+    isotonic_gss_df,
+    audit_fn,
+    alert_col="gss_v33_alert",
+    event_col="event_now",
+):
+    """
+    Build timing-aware results across raw, Platt, and isotonic GSS outputs.
+    """
+
+    def run_timing(df, name):
+        timing_df = audit_fn(
+            df,
+            alert_col=alert_col,
+            event_col=event_col,
+        )
+        timing_df["version"] = name
+        return timing_df
+
+    return pd.concat([
+        run_timing(raw_gss_df, "raw"),
+        run_timing(platt_gss_df, "platt"),
+        run_timing(isotonic_gss_df, "isotonic"),
+    ])
