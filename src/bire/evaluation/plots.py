@@ -576,3 +576,93 @@ def plot_false_alert_episode_summary(
     plt.ylabel("Count")
     plt.tight_layout()
     plt.show()
+
+import matplotlib.pyplot as plt
+from sklearn.calibration import calibration_curve
+
+
+def plot_calibration_curves(
+    df,
+    horizon_name,
+    target_col,
+    risk_col,
+    n_bins=10,
+):
+    """
+    Plot calibration (reliability) curves for raw and calibrated probabilities.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe containing raw and calibrated probabilities.
+    horizon_name : str
+        Horizon label (e.g., "15min", "30min", "60min").
+    target_col : str
+        Ground truth binary target column.
+    risk_col : str
+        Raw probability column.
+    n_bins : int
+        Number of bins for calibration curve.
+    """
+
+    y_true = df[target_col].astype(int)
+
+    curve_specs = [
+        ("Raw XGBoost", risk_col),
+        ("Platt Calibrated", f"{risk_col}_platt"),
+        ("Isotonic Calibrated", f"{risk_col}_isotonic"),
+    ]
+
+    plt.figure(figsize=(7, 6))
+
+    for label, col in curve_specs:
+        prob_true, prob_pred = calibration_curve(
+            y_true,
+            df[col],
+            n_bins=n_bins,
+            strategy="quantile",
+        )
+
+        plt.plot(prob_pred, prob_true, marker="o", label=label)
+
+    plt.plot([0, 1], [0, 1], linestyle="--", label="Perfect Calibration")
+
+    plt.title(f"Calibration Curve — {horizon_name}")
+    plt.xlabel("Predicted Risk")
+    plt.ylabel("Observed Event Frequency")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+def plot_calibrated_risk_distributions(
+    df,
+    horizon_name,
+    risk_col,
+    bins=30,
+):
+    """
+    Plot distributions of raw and calibrated probabilities.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe containing probability columns.
+    horizon_name : str
+        Horizon label.
+    risk_col : str
+        Raw probability column.
+    bins : int
+        Number of histogram bins.
+    """
+
+    plt.figure(figsize=(8, 5))
+
+    df[risk_col].hist(alpha=0.5, bins=bins, label="Raw")
+    df[f"{risk_col}_platt"].hist(alpha=0.5, bins=bins, label="Platt")
+    df[f"{risk_col}_isotonic"].hist(alpha=0.5, bins=bins, label="Isotonic")
+
+    plt.title(f"Risk Score Distribution — {horizon_name}")
+    plt.xlabel("Predicted Risk")
+    plt.ylabel("Row Count")
+    plt.legend()
+    plt.show()
