@@ -1749,3 +1749,56 @@ def get_bms_mode_config(mode: str) -> dict:
         raise ValueError(f"Unknown BMS mode: {mode}. Available modes: {list(configs.keys())}")
 
     return configs[mode]
+
+def audit_alert_timing(
+    df,
+    alert_col="gss_v3_alert",
+    event_col="event_now",
+    patient_col="patient_id",
+    time_col="timestamp",
+):
+    import pandas as pd
+    import numpy as np
+
+    out_rows = []
+
+    work = df.copy()
+    work[time_col] = pd.to_datetime(work[time_col])
+    work = work.sort_values([patient_col, time_col])
+
+    for patient_id, pdf in work.groupby(patient_col):
+        pdf = pdf.sort_values(time_col).copy()
+
+        event_times = pdf.loc[pdf[event_col] == 1, time_col]
+        alert_times = pdf.loc[pdf[alert_col] == 1, time_col]
+
+        has_event = len(event_times) > 0
+        has_alert = len(alert_times) > 0
+
+        first_event_time = event_times.min() if has_event else pd.NaT
+        first_alert_time = alert_times.min() if has_alert else pd.NaT
+
+        if not has_alert:
+            category = "no_alert"
+            lead_minutes = np.nan
+        elif not has_event:
+            category = "no_event_alert"
+            lead_minutes = np.nan
+        elif first_alert_time < first_event_time:
+            category = "true_predictive_alert"
+            lead_minutes = (first_event_time - first_alert_time).total_seconds() / 60
+        else:
+            category = "post_event_alert"
+            lead_minutes = (first_event_time - first_alert_time).total_seconds() / 60
+
+        out_rows.append({
+            "patient_id": patient_id,
+            "has_event": int(has_event),
+            "has_alert": int(has_alert),
+            "first_event_time": first_event_time,
+            "first_alert_time": first_alert_time,
+            "timing_category": category,
+            "lead_minutes": lead_minutes,
+        })
+
+    return pd.DataFrame(out_rows)
