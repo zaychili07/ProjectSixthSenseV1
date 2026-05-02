@@ -1802,3 +1802,60 @@ def audit_alert_timing(
         })
 
     return pd.DataFrame(out_rows)
+
+def categorize_lead_time(
+    lead_minutes,
+    very_early_threshold: float = 120,
+    early_threshold: float = 60,
+    on_time_threshold: float = 15,
+):
+    """
+    Categorize pre-event lead time into clinically interpretable timing buckets.
+
+    Buckets:
+    - very_early: >= 120 minutes
+    - early: 60 to <120 minutes
+    - on_time: 15 to <60 minutes
+    - late_pre_event: 0 to <15 minutes
+    - post_event_or_missing: negative or missing lead time
+    """
+
+    import pandas as pd
+
+    if pd.isna(lead_minutes):
+        return "post_event_or_missing"
+
+    if lead_minutes >= very_early_threshold:
+        return "very_early"
+
+    if lead_minutes >= early_threshold:
+        return "early"
+
+    if lead_minutes >= on_time_threshold:
+        return "on_time"
+
+    if lead_minutes >= 0:
+        return "late_pre_event"
+
+    return "post_event"
+
+def summarize_timing_buckets(
+    lead_df,
+    lead_col: str = "lead_minutes",
+):
+    """
+    Summarize timing bucket distribution from a lead-time dataframe.
+    """
+
+    out = lead_df.copy()
+
+    out["timing_bucket"] = out[lead_col].apply(categorize_lead_time)
+
+    summary = (
+        out["timing_bucket"]
+        .value_counts(normalize=True)
+        .rename_axis("timing_bucket")
+        .reset_index(name="proportion")
+    )
+
+    return out, summary
