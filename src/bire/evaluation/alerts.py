@@ -102,51 +102,135 @@ BMS_MODES = list(BMS_CONFIG.keys())
 def assign_bms_modes_per_patient(
     df,
     patient_col="patient_id",
-    mode_probs=None,
-    random_state=42,
+    risk_col="pred_proba",
+    event_col="event_now",
+    output_col="bms_mode",
 ):
     """
-    Assign one BMS mode per patient.
+    Assign BMS clinical modes at the patient level using signal-driven severity logic.
 
-    This is intended for research simulation only. In a real clinical
-    system, mode would come from encounter context, care setting,
-    clinician triage, or validated operational metadata.
+    This replaces random/placeholding assignment with patient-level acuity stratification
+    based on risk burden and deterioration signals.
+
+    Notes
+    -----
+    This is ESI-inspired for research/prototype use only.
+    It is NOT clinical triage and should not be treated as a medical decision tool.
     """
+
+    import numpy as np
+    import pandas as pd
+
     out = df.copy()
 
-    if mode_probs is None:
-        mode_probs = {
-            "ICU": 0.15,
-            "ER_ESI_1": 0.05,
-            "ER_ESI_2": 0.10,
-            "ER_ESI_3": 0.20,
-            "ER_ESI_4": 0.15,
-            "ER_ESI_5": 0.10,
-            "Inpatient": 0.15,
-            "Outpatient": 0.10,
-        }
+    if patient_col not in out.columns:
+        raise ValueError(f"Missing required patient column: {patient_col}")
 
-    modes = list(mode_probs.keys())
-    probs = list(mode_probs.values())
+    if risk_col not in out.columns:
+        raise ValueError(f"Missing required risk column: {risk_col}")
 
-    if not np.isclose(sum(probs), 1.0):
-        raise ValueError("mode_probs must sum to 1.0")
+    # Event column is optional.
+    has_event_col = event_col in out.columns
 
-    rng = np.random.default_rng(random_state)
+    def _safe_count_threshold(x, threshold):
+        return int((x >= threshold).sum())
 
-    unique_patients = out[patient_col].drop_duplicates()
+    agg_dict = {
+        "rows": (risk_col, "size"),
+        "max_risk": (risk_col, "max"),
+        "mean_risk": (risk_col, "mean"),
+        "high_risk_rows": (risk_col, lambda x: _safe_count_threshold(x, 0.30)),
+        "very_high_risk_rows": (risk_col, lambda x: _safe_count_threshold(x, 0.70)),
+        "extreme_risk_rows": (risk_col, lambda x: _safe_count_threshold(x, 0.90)),
+    }
 
-    patient_mode_df = pd.DataFrame({
-        patient_col: unique_patients,
-        "bms_mode": rng.choice(
-            modes,
-            size=len(unique_patients),
-            p=probs,
-        ),
-    })
+    if has_event_col:
+        agg_dict["event_rows"] = (event_col, "sum")
 
-    out = out.drop(columns=["bms_mode"], errors="ignore")
-    out = out.merge(patient_mode_df, on=patient_col, how="left")
+    profile = (
+        out.groupby(patient_col)
+        .agg(**agg_dict)
+        .reset_index()
+    )
+
+    if not has_event_col:
+        profile["event_rows"] = 0
+
+    profile["high_risk_ratio"] = profile["high_risk_rows"] / profile["rows"].clip(lower=1)
+    profile["very_high_risk_ratio"] = profile["very_high_risk_rows"] / profile["rows"].clip(lower=1)
+    profile["extreme_risk_ratio"] = profile["extreme_risk_rows"] / profile["rows"].clip(lower=1)
+    profile["event_ratio"] = profile["event_rows"] / profile["rows"].clip(lower=1)
+
+    def _assign_mode(row):
+        max_risk = row["max_risk"]
+        mean_risk = row["mean_risk"]
+        high_ratio = row["high_risk_ratio"]
+        very_high_ratio = row["very_high_risk_ratio"]
+        extreme_ratio = row["extreme_risk_ratio"]
+        event_rows = row["event_rows"]
+
+        # Highest acuity: sustained extreme risk or actual deterioration burden.
+        if (
+            mean_risk >= 0.60
+            or extreme_ratio >= 0.35
+            or very_high_ratio >= 0.45
+            or event_rows >= 5
+        ):
+            return "ICU"
+
+        # ER_ESI_1: critical / immediate concern.
+        if (
+            max_risk >= 0.98
+            and (
+                mean_risk >= 0.35
+                or extreme_ratio >= 0.15
+                or very_high_ratio >= 0.25
+                or high_ratio >= 0.45
+            )
+        ):
+            return "ER_ESI_1"
+
+        # ER_ESI_2: high risk but less sustained than ICU/ESI-1.
+        if (
+            max_risk >= 0.95
+            or mean_risk >= 0.25
+            or very_high_ratio >= 0.10
+            or high_ratio >= 0.30
+        ):
+            return "ER_ESI_2"
+
+        # ER_ESI_3: moderate risk / needs workup.
+        if (
+            max_risk >= 0.75
+            or mean_risk >= 0.12
+            or high_ratio >= 0.12
+        ):
+            return "ER_ESI_3"
+
+        # ER_ESI_4: low-to-moderate episodic risk.
+        if (
+            max_risk >= 0.45
+            or mean_risk >= 0.06
+            or high_ratio >= 0.03
+        ):
+            return "ER_ESI_4"
+
+        # ER_ESI_5: very low risk, walk-in-like ER pattern.
+        if max_risk >= 0.20 or mean_risk >= 0.03:
+            return "ER_ESI_5"
+
+        # Outpatient: stable / very low risk.
+        return "Outpatient"
+
+    profile[output_col] = profile.apply(_assign_mode, axis=1)
+
+    mode_map = profile[[patient_col, output_col]]
+
+    out = out.drop(columns=[output_col], errors="ignore")
+    out = out.merge(mode_map, on=patient_col, how="left")
+
+    if out[output_col].isna().any():
+        raise ValueError("BMS mode assignment produced null modes.")
 
     return out
 
