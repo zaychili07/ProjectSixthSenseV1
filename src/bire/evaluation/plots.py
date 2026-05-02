@@ -581,7 +581,7 @@ import matplotlib.pyplot as plt
 from sklearn.calibration import calibration_curve
 
 
-def plot_calibration_curves(
+def plot_reliability_curves(
     df,
     horizon_name,
     target_col,
