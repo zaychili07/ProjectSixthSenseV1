@@ -312,3 +312,129 @@ def apply_gss_v3(
     ).astype(int)
 
     return out
+
+def apply_gss_mode_aware(
+    df,
+    policy,
+    patient_col="patient_id",
+    time_col="timestamp",
+    risk_col="pred_proba",
+    mode_col="bms_mode",
+    base_alert_col="bms_alert",
+    event_col="event_now",
+    output_alert_col="gss_mode_alert",
+    output_suppressed_col="gss_mode_suppressed",
+    output_reason_col="gss_mode_reason",
+):
+    """
+    Mode-aware Gateway Suppression System (GSS)
+
+    Applies suppression and escalation logic conditioned on BMS mode.
+
+    Notes
+    -----
+    Research prototype. Not a clinical decision system.
+    """
+
+    import numpy as np
+
+    out = df.copy()
+
+    required_cols = [patient_col, time_col, risk_col, mode_col, base_alert_col]
+    missing = [c for c in required_cols if c not in out.columns]
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")
+
+    has_event = event_col in out.columns
+
+    out = out.sort_values([patient_col, time_col]).reset_index(drop=True)
+
+    # Initialize outputs
+    out[output_alert_col] = 0
+    out[output_suppressed_col] = False
+    out[output_reason_col] = "no_base_alert"
+
+    out["gss_mode_policy_threshold"] = np.nan
+    out["gss_mode_cooldown_steps"] = np.nan
+    out["gss_mode_risk_delta"] = 0.0
+
+    for pid, idxs in out.groupby(patient_col).groups.items():
+        idxs = list(idxs)
+
+        last_alert_pos = None
+        prev_risk = None
+
+        for pos, idx in enumerate(idxs):
+            row = out.loc[idx]
+
+            mode = row[mode_col]
+            risk = row[risk_col]
+            base_alert = row[base_alert_col]
+
+            if mode not in policy:
+                raise ValueError(f"Mode {mode} not in GSS policy.")
+
+            cfg = policy[mode]
+
+            threshold = cfg["risk_threshold"]
+            cooldown = cfg["cooldown_steps"]
+            delta_thresh = cfg["escalation_delta"]
+            allow_post = cfg["allow_post_event_escalation"]
+
+            out.loc[idx, "gss_mode_policy_threshold"] = threshold
+            out.loc[idx, "gss_mode_cooldown_steps"] = cooldown
+
+            # Risk delta
+            risk_delta = 0.0 if prev_risk is None else (risk - prev_risk)
+            out.loc[idx, "gss_mode_risk_delta"] = risk_delta
+            prev_risk = risk
+
+            if base_alert != 1:
+                out.loc[idx, output_reason_col] = "no_base_alert"
+                continue
+
+            event_now = bool(row[event_col] == 1) if has_event else False
+
+            # Post-event suppression
+            if event_now and not allow_post:
+                out.loc[idx, output_suppressed_col] = True
+                out.loc[idx, output_reason_col] = "post_event_suppressed"
+                continue
+
+            # Cooldown logic
+            in_cooldown = (
+                last_alert_pos is not None
+                and (pos - last_alert_pos) < cooldown
+            )
+
+            strong = risk >= threshold
+            escalating = risk_delta >= delta_thresh
+
+            # First alert always passes
+            if last_alert_pos is None:
+                out.loc[idx, output_alert_col] = 1
+                out.loc[idx, output_reason_col] = "first_alert"
+                last_alert_pos = pos
+                continue
+
+            # Suppress during cooldown unless escalation
+            if in_cooldown and not escalating:
+                out.loc[idx, output_suppressed_col] = True
+                out.loc[idx, output_reason_col] = "cooldown_suppressed"
+                continue
+
+            # Allow if strong or escalating
+            if strong or escalating:
+                out.loc[idx, output_alert_col] = 1
+
+                if escalating:
+                    out.loc[idx, output_reason_col] = "escalation_alert"
+                else:
+                    out.loc[idx, output_reason_col] = "threshold_alert"
+
+                last_alert_pos = pos
+            else:
+                out.loc[idx, output_suppressed_col] = True
+                out.loc[idx, output_reason_col] = "threshold_suppressed"
+
+    return out
