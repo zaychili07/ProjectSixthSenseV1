@@ -1,4 +1,34 @@
 # 29.2 — build_alert_episodes()
+def prepare_for_episode_building(
+    df,
+    patient_col="patient_id",
+    time_col="timestamp",
+    alert_col="final_alert_with_velocity"
+):
+    """
+    Prepares dataframe for episode construction.
+
+    Ensures:
+    - Sorting by patient and time
+    - Boolean alert column
+    - No missing critical columns
+    """
+
+    required_cols = [patient_col, time_col, alert_col]
+
+    # Check required columns
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")
+
+    # Sort for temporal consistency
+    df = df.sort_values([patient_col, time_col]).copy()
+
+    # Ensure alert column is boolean
+    df[alert_col] = df[alert_col].astype(bool)
+
+    return df
+
 def build_alert_episodes(
     df,
     alert_col="final_alert_with_velocity",
