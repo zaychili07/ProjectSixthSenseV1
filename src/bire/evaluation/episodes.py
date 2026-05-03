@@ -1,5 +1,5 @@
-# 29.2 — build_alert_episodes()
-def prepare_for_episode_building(
+# Used for chapter 29 - episode based alerting
+def prepare_episode_dataframe(
     df,
     patient_col="patient_id",
     time_col="timestamp",
