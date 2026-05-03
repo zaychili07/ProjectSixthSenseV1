@@ -40,3 +40,24 @@ def load_csv_to_bire_format(file_path: str) -> pd.DataFrame:
     df = df.reset_index(drop=True)
 
     return df
+
+# this wil enforce data leakage and give it guide lines
+def enforce_temporal_integrity(df, patient_col="patient_id", time_col="timestamp"):
+    """
+    Ensures strict temporal ordering per patient.
+    """
+
+    df = df.sort_values([patient_col, time_col]).reset_index(drop=True)
+
+    # Check for backward time jumps (leakage indicator)
+    time_diff = df.groupby(patient_col)[time_col].diff()
+
+    if (time_diff < pd.Timedelta(0)).any():
+        raise ValueError("Temporal leakage detected: timestamps not strictly increasing")
+
+    return df
+
+def assert_no_duplicate_timestamps(df, patient_col="patient_id", time_col="timestamp"):
+    dupes = df.duplicated(subset=[patient_col, time_col]).sum()
+    if dupes > 0:
+        raise ValueError(f"Duplicate timestamps detected: {dupes}")
