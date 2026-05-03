@@ -1,0 +1,94 @@
+# 29.2 — build_alert_episodes()
+def build_alert_episodes(
+    df,
+    alert_col="final_alert_with_velocity",
+    patient_col="patient_id",
+    time_col="timestamp",
+    cooldown_steps=6
+):
+    """
+    Converts row-level alerts into episode-based alerts.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+    alert_col : str
+    patient_col : str
+    time_col : str
+    cooldown_steps : int
+
+    Returns
+    -------
+    pd.DataFrame with episode columns added
+    """
+
+    df = df.copy()
+
+    # Initialize columns
+    df["alert_episode_id"] = -1
+    df["alert_episode_start"] = False
+    df["alert_episode_active"] = False
+    df["episode_alert"] = False
+    df["episode_start_time"] = pd.NaT
+    df["episode_end_time"] = pd.NaT
+
+    episode_counter = 0
+
+    # Process per patient
+    for patient_id, group in df.groupby(patient_col):
+
+        group = group.sort_values(time_col)
+
+        current_episode = None
+        cooldown_counter = 0
+
+        for idx in group.index:
+
+            alert = df.loc[idx, alert_col]
+
+           
+            # START NEW EPISODE
+            if alert:
+                if current_episode is None:
+                    episode_counter += 1
+                    current_episode = episode_counter
+
+                    df.loc[idx, "alert_episode_start"] = True
+                    df.loc[idx, "episode_alert"] = True
+                    df.loc[idx, "episode_start_time"] = df.loc[idx, time_col]
+
+                cooldown_counter = 0
+
+            
+           
+            # CONTINUATION OR COOLDOWN
+            else:
+                if current_episode is not None:
+                    cooldown_counter += 1
+
+                    if cooldown_counter >= cooldown_steps:
+                        # End episode
+                        df.loc[idx, "episode_end_time"] = df.loc[idx, time_col]
+                        current_episode = None
+                        cooldown_counter = 0
+             # MARK ACTIVE STATE
+            if current_episode is not None:
+                df.loc[idx, "alert_episode_id"] = current_episode
+                df.loc[idx, "alert_episode_active"] = True
+
+   
+    # Forward fill episode_start_time
+    df["episode_start_time"] = df.groupby("alert_episode_id")["episode_start_time"].ffill()
+
+    
+    # Compute duration (in minutes)
+    df["episode_duration_minutes"] = (
+        (df[time_col] - df["episode_start_time"])
+        .dt.total_seconds() / 60
+    )
+
+    return df
+
+
+# Example usage:
+# episodes_df = build_alert_episodes(episode_ready_df)
