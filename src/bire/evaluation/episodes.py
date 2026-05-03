@@ -1,3 +1,4 @@
+import pandas as pd
 # Used for chapter 29 - episode based alerting
 def prepare_episode_dataframe(
     df,
