@@ -386,4 +386,4 @@ def apply_ibpip_gss_logic( #IBPIP upgrade to v2
     # Then allow escalation to override suppression
     df.loc[df["ibpip_override_alert"], output_alert_col] = True
 
-return df
+    return df
