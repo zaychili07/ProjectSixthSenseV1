@@ -394,67 +394,69 @@ def apply_gss_velocity_escalation(
     patient_col="patient_id",
     output_col="gss_ve_override",
     reason_col="gss_ve_reason",
+    score_col="gss_ve_score",
+    threshold=3,
 ):
     df = df.copy()
 
     df[output_col] = False
     df[reason_col] = None
+    df[score_col] = 0
 
-    # Individual velocity danger flags
-    df["gss_ve_spo2_drop"] = (
-        df["spo2_delta"] <= -2
-        if "spo2_delta" in df.columns
-        else False
+
+    # SpO2 Scoring
+    if "spo2_delta" in df.columns:
+        df.loc[df["spo2_delta"] <= -2, score_col] += 2
+        df.loc[df["spo2_delta"] <= -3, score_col] += 1  # severe bonus
+
+    
+    # SBP Scoring
+    if "sbp_delta" in df.columns:
+        df.loc[df["sbp_delta"] <= -10, score_col] += 2
+        df.loc[df["sbp_delta"] <= -15, score_col] += 1
+
+   
+    # Heart Rate Scoring
+    if "heart_rate_delta" in df.columns:
+        df.loc[df["heart_rate_delta"] >= 15, score_col] += 1
+    
+    # Respiratory Rate Scoring
+    if "resp_rate_delta" in df.columns:
+        df.loc[df["resp_rate_delta"] >= 8, score_col] += 1
+
+ 
+    # Multi-signal bonus
+    signal_flags = []
+
+    if "spo2_delta" in df.columns:
+        signal_flags.append(df["spo2_delta"] <= -2)
+    if "sbp_delta" in df.columns:
+        signal_flags.append(df["sbp_delta"] <= -10)
+    if "heart_rate_delta" in df.columns:
+        signal_flags.append(df["heart_rate_delta"] >= 15)
+    if "resp_rate_delta" in df.columns:
+        signal_flags.append(df["resp_rate_delta"] >= 8)
+
+    if signal_flags:
+        combined = signal_flags[0]
+        for cond in signal_flags[1:]:
+            combined = combined + cond
+
+        df["gss_ve_signal_count"] = combined
+        df.loc[df["gss_ve_signal_count"] >= 2, score_col] += 1
+
+    # Persistence bonus
+    persistent = (
+        (df[score_col] > 0) &
+        (df.groupby(patient_col)[score_col].shift(1) > 0)
     )
 
-    df["gss_ve_sbp_drop"] = (
-        df["sbp_delta"] <= -10
-        if "sbp_delta" in df.columns
-        else False
-    )
+    df.loc[persistent, score_col] += 1
 
-    df["gss_ve_hr_rise"] = (
-        df["heart_rate_delta"] >= 15
-        if "heart_rate_delta" in df.columns
-        else False
-    )
+    # Final Trigger
+    trigger = df[score_col] >= threshold
 
-    df["gss_ve_rr_rise"] = (
-        df["resp_rate_delta"] >= 8
-        if "resp_rate_delta" in df.columns
-        else False
-    )
-
-    ve_flag_cols = [
-        "gss_ve_spo2_drop",
-        "gss_ve_sbp_drop",
-        "gss_ve_hr_rise",
-        "gss_ve_rr_rise",
-    ]
-
-    # Count simultaneous velocity danger signals
-    df["gss_ve_signal_count"] = df[ve_flag_cols].sum(axis=1)
-
-    # Rule 1: multiple danger signals at same timestamp
-    multi_signal_trigger = df["gss_ve_signal_count"] >= 2
-
-    # Rule 2: severe single-signal persistence across consecutive row
-    any_velocity_signal = df[ve_flag_cols].any(axis=1)
-
-    persistent_velocity = (
-        any_velocity_signal &
-        any_velocity_signal.groupby(df[patient_col]).shift(1).fillna(False)
-    )
-
-    # Final GSS-VE v2 trigger
-    ve_trigger = multi_signal_trigger | persistent_velocity
-
-    df.loc[ve_trigger, output_col] = True
-
-    df.loc[multi_signal_trigger, reason_col] = "MULTI_SIGNAL_VELOCITY_ESCALATION"
-    df.loc[
-        persistent_velocity & ~multi_signal_trigger,
-        reason_col
-    ] = "PERSISTENT_VELOCITY_ESCALATION"
+    df.loc[trigger, output_col] = True
+    df.loc[trigger, reason_col] = "WEIGHTED_VELOCITY_ESCALATION"
 
     return df
