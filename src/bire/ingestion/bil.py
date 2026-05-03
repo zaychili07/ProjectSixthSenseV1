@@ -66,3 +66,11 @@ def assert_no_duplicate_timestamps(df, patient_col="patient_id", time_col="times
     dupes = df.duplicated(subset=[patient_col, time_col]).sum()
     if dupes > 0:
         raise ValueError(f"Duplicate timestamps detected: {dupes}")
+
+def load_external_to_bire_format(
+    file_path,
+    column_map=None,
+    source_name="external_csv",
+    drop_duplicate_timestamps=True,
+):
+    ...
