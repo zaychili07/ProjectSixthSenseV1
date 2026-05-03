@@ -391,49 +391,70 @@ def apply_ibpip_gss_logic( #IBPIP upgrade to v2
 # GSS-VE — Velocity Escalation Layer
 def apply_gss_velocity_escalation(
     df,
+    patient_col="patient_id",
     output_col="gss_ve_override",
     reason_col="gss_ve_reason",
 ):
     df = df.copy()
 
-    # Initialize
     df[output_col] = False
     df[reason_col] = None
 
-  
-    # Velocity calculations (assumes 5-min intervals)
-    # You already have deltas in Cycle 1 → use them
-    # Example signals
-    velocity_conditions = []
+    # Individual velocity danger flags
+    df["gss_ve_spo2_drop"] = (
+        df["spo2_delta"] <= -2
+        if "spo2_delta" in df.columns
+        else False
+    )
 
-    # SpO2 dropping fast
-    if "spo2_delta" in df.columns:
-        spo2_drop = df["spo2_delta"] <= -2
-        velocity_conditions.append(spo2_drop)
+    df["gss_ve_sbp_drop"] = (
+        df["sbp_delta"] <= -10
+        if "sbp_delta" in df.columns
+        else False
+    )
 
-    # SBP dropping fast
-    if "sbp_delta" in df.columns:
-        sbp_drop = df["sbp_delta"] <= -10
-        velocity_conditions.append(sbp_drop)
+    df["gss_ve_hr_rise"] = (
+        df["heart_rate_delta"] >= 15
+        if "heart_rate_delta" in df.columns
+        else False
+    )
 
-    # Heart rate rising fast
-    if "heart_rate_delta" in df.columns:
-        hr_rise = df["heart_rate_delta"] >= 15
-        velocity_conditions.append(hr_rise)
+    df["gss_ve_rr_rise"] = (
+        df["resp_rate_delta"] >= 8
+        if "resp_rate_delta" in df.columns
+        else False
+    )
 
-    # Respiratory rate rising fast
-    if "resp_rate_delta" in df.columns:
-        rr_rise = df["resp_rate_delta"] >= 8
-        velocity_conditions.append(rr_rise)
+    ve_flag_cols = [
+        "gss_ve_spo2_drop",
+        "gss_ve_sbp_drop",
+        "gss_ve_hr_rise",
+        "gss_ve_rr_rise",
+    ]
 
-    
-    # Combine velocity signals
-    if velocity_conditions:
-        velocity_trigger = velocity_conditions[0]
-        for cond in velocity_conditions[1:]:
-            velocity_trigger = velocity_trigger | cond
+    # Count simultaneous velocity danger signals
+    df["gss_ve_signal_count"] = df[ve_flag_cols].sum(axis=1)
 
-        df.loc[velocity_trigger, output_col] = True
-        df.loc[velocity_trigger, reason_col] = "FAST_DETERIORATION_ESCALATION"
+    # Rule 1: multiple danger signals at same timestamp
+    multi_signal_trigger = df["gss_ve_signal_count"] >= 2
+
+    # Rule 2: severe single-signal persistence across consecutive row
+    any_velocity_signal = df[ve_flag_cols].any(axis=1)
+
+    persistent_velocity = (
+        any_velocity_signal &
+        any_velocity_signal.groupby(df[patient_col]).shift(1).fillna(False)
+    )
+
+    # Final GSS-VE v2 trigger
+    ve_trigger = multi_signal_trigger | persistent_velocity
+
+    df.loc[ve_trigger, output_col] = True
+
+    df.loc[multi_signal_trigger, reason_col] = "MULTI_SIGNAL_VELOCITY_ESCALATION"
+    df.loc[
+        persistent_velocity & ~multi_signal_trigger,
+        reason_col
+    ] = "PERSISTENT_VELOCITY_ESCALATION"
 
     return df
