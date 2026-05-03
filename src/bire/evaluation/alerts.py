@@ -381,7 +381,7 @@ def apply_ibpip_gss_logic( #IBPIP upgrade to v2
     df[output_alert_col] = df[base_alert_col].copy()
 
     # Suppress first, then allow strong escalation to override suppression
-    df.loc[df["ibpip_suppress_alert"], output_alert_col] = False
+    df.loc[df["ibpip_suppress_alert"], output_alert_col] = 0
     df.loc[df["ibpip_override_alert"], output_alert_col] = True
 
     return df
