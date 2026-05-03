@@ -4,7 +4,7 @@
 
 import pandas as pd
 
-REQUIRED_COLUMNS = [
+CANONICAL_BIRE_COLUMNS = [
     "patient_id",
     "timestamp",
     "heart_rate",
@@ -14,6 +14,8 @@ REQUIRED_COLUMNS = [
     "sbp",
     "dbp",
 ]
+
+REQUIRED_COLUMNS = CANONICAL_BIRE_COLUMNS.copy()
 
 
 def load_csv_to_bire_format(file_path: str) -> pd.DataFrame:
