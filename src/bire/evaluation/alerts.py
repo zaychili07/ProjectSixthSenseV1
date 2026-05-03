@@ -387,3 +387,53 @@ def apply_ibpip_gss_logic( #IBPIP upgrade to v2
     df.loc[df["ibpip_override_alert"], output_alert_col] = True
 
     return df
+
+# GSS-VE — Velocity Escalation Layer
+def apply_gss_velocity_escalation(
+    df,
+    output_col="gss_ve_override",
+    reason_col="gss_ve_reason",
+):
+    df = df.copy()
+
+    # Initialize
+    df[output_col] = False
+    df[reason_col] = None
+
+  
+    # Velocity calculations (assumes 5-min intervals)
+    # You already have deltas in Cycle 1 → use them
+    # Example signals
+    velocity_conditions = []
+
+    # SpO2 dropping fast
+    if "spo2_delta" in df.columns:
+        spo2_drop = df["spo2_delta"] <= -2
+        velocity_conditions.append(spo2_drop)
+
+    # SBP dropping fast
+    if "sbp_delta" in df.columns:
+        sbp_drop = df["sbp_delta"] <= -10
+        velocity_conditions.append(sbp_drop)
+
+    # Heart rate rising fast
+    if "heart_rate_delta" in df.columns:
+        hr_rise = df["heart_rate_delta"] >= 15
+        velocity_conditions.append(hr_rise)
+
+    # Respiratory rate rising fast
+    if "resp_rate_delta" in df.columns:
+        rr_rise = df["resp_rate_delta"] >= 8
+        velocity_conditions.append(rr_rise)
+
+    
+    # Combine velocity signals
+    if velocity_conditions:
+        velocity_trigger = velocity_conditions[0]
+        for cond in velocity_conditions[1:]:
+            velocity_trigger = velocity_trigger | cond
+
+        df.loc[velocity_trigger, output_col] = True
+        df.loc[velocity_trigger, reason_col] = "FAST_DETERIORATION_ESCALATION"
+
+    return df
