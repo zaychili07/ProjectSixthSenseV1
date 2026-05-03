@@ -377,11 +377,13 @@ def apply_ibpip_gss_logic( #IBPIP upgrade to v2
     df.loc[recovery_suppression, "ibpip_suppress_alert"] = True
     df.loc[recovery_suppression, "ibpip_override_reason"] = "SUPPRESSED_RECOVERY_TREND"
 
-    # Final alert decision
-    df[output_alert_col] = df[base_alert_col].copy()
+    # Final alert decision (force boolean type)
+    df[output_alert_col] = df[base_alert_col].astype(bool)
 
-    # Suppress first, then allow strong escalation to override suppression
-    df.loc[df["ibpip_suppress_alert"], output_alert_col] = 0
+    # Suppress first
+    df.loc[df["ibpip_suppress_alert"], output_alert_col] = False
+
+    # Then allow escalation to override suppression
     df.loc[df["ibpip_override_alert"], output_alert_col] = True
 
-    return df
+return df
