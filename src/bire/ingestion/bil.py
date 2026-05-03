@@ -36,6 +36,9 @@ def load_csv_to_bire_format(file_path: str) -> pd.DataFrame:
     # Sort for temporal integrity
     df = df.sort_values(["patient_id", "timestamp"])
 
+    # leakage enforcement!!! 
+    df = enforce_temporal_integrity(df)
+    
     # Reset index
     df = df.reset_index(drop=True)
 
