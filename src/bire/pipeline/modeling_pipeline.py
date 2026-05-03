@@ -194,7 +194,7 @@ def run_bire_modeling(df, feature_cols, threshold=0.5, random_state: int = 42):
         test_size=0.20,
         val_size=0.20,
         random_state=random_state,
-)
+
     )
 
     print("target in train_df:", "target" in train_df.columns)
