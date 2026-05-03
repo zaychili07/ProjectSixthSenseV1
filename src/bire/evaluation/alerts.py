@@ -330,39 +330,32 @@ def compare_bms_to_global_threshold(
 # 27.8 — IBPIP + GSS Integration
 #========================================
 
+###############################################
+# IBPIP-Aware GSS Override Logic
+###############################################
+
 def apply_ibpip_gss_logic(df):
     df = df.copy()
 
-    # Default: follow existing GSS
     df["ibpip_override_alert"] = False
     df["ibpip_override_reason"] = None
 
-    ###############################################
-    # RULE 1 — DO NOTHING DURING WARMUP
-    ###############################################
-    # Let baseline form first
+    # WARMUP
     warmup_mask = df["ibpip_state"] == "WARMUP"
 
-    ###############################################
-    # RULE 2 — BREAK SUPPRESSION ON STRONG DEVIATION
-    ###############################################
+    # HIGH DEVIATION → BREAK SUPPRESSION
     high_deviation = (
         (df["ibpip_score"] > 2.0) |
         (df["ibpip_max_abs_z"] > 3.0) |
         (df["ibpip_n_abnormal_signals"] >= 2)
     )
 
-    break_mask = (
-        (~warmup_mask) &
-        high_deviation
-    )
+    break_mask = (~warmup_mask) & high_deviation
 
     df.loc[break_mask, "ibpip_override_alert"] = True
     df.loc[break_mask, "ibpip_override_reason"] = "HIGH_DEVIATION"
 
-    ###############################################
-    # RULE 3 — ALLOW SUPPRESSION IF STABLE BASELINE
-    ###############################################
+    # STABLE BASELINE
     stable_mask = (
         (df["ibpip_state"] == "CAUTIOUS_BASELINE") &
         (df["ibpip_score"] < 1.0) &
@@ -371,27 +364,16 @@ def apply_ibpip_gss_logic(df):
 
     df.loc[stable_mask, "ibpip_override_reason"] = "STABLE_BASELINE"
 
-    ###############################################
-    # RULE 4 — REASSESSING (RECOVERY AWARE)
-    ###############################################
+    # REASSESSING / RECOVERY
     reassessing_mask = df["ibpip_state"] == "REASSESSING"
 
-    improving_mask = (
-        reassessing_mask &
-        (df["ibpip_score"] < 1.0)
-    )
+    improving_mask = reassessing_mask & (df["ibpip_score"] < 1.0)
 
     df.loc[improving_mask, "ibpip_override_reason"] = "RECOVERY_TREND"
 
-    ###############################################
-    # FINAL DECISION
-    ###############################################
-    # If override alert → force alert
+    # FINAL ALERT
     df["final_ibpip_alert"] = df["bms_alert"].copy()
 
-    df.loc[
-        df["ibpip_override_alert"] == True,
-        "final_ibpip_alert"
-    ] = True
+    df.loc[df["ibpip_override_alert"], "final_ibpip_alert"] = True
 
     return df
