@@ -395,7 +395,7 @@ def apply_gss_velocity_escalation(
     output_col="gss_ve_override",
     reason_col="gss_ve_reason",
     score_col="gss_ve_score",
-    threshold=3,
+    threshold=3,   # new addition
 ):
     df = df.copy()
 
