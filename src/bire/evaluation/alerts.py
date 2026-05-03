@@ -326,54 +326,62 @@ def compare_bms_to_global_threshold(
         },
     ])
 
-#========================================
-# 27.8 — IBPIP + GSS Integration
-#========================================
-
 ###############################################
-# IBPIP-Aware GSS Override Logic
+# IBPIP-Aware GSS Override Logic — Balanced v2
 ###############################################
 
-def apply_ibpip_gss_logic(df):
+def apply_ibpip_gss_logic( #IBPIP upgrade to v2
+    df,
+    base_alert_col="bms_alert",
+    output_alert_col="final_ibpip_alert",
+):
     df = df.copy()
 
     df["ibpip_override_alert"] = False
+    df["ibpip_suppress_alert"] = False
     df["ibpip_override_reason"] = None
 
-    # WARMUP
     warmup_mask = df["ibpip_state"] == "WARMUP"
 
-    # HIGH DEVIATION → BREAK SUPPRESSION
+    # Stronger escalation rule: require meaningful deviation
     high_deviation = (
-        (df["ibpip_score"] > 2.0) |
-        (df["ibpip_max_abs_z"] > 3.0) |
-        (df["ibpip_n_abnormal_signals"] >= 2)
+        (~warmup_mask) &
+        (
+            ((df["ibpip_score"] >= 2.5) & (df["ibpip_n_abnormal_signals"] >= 2)) |
+            (df["ibpip_max_abs_z"] >= 4.0)
+        )
     )
 
-    break_mask = (~warmup_mask) & high_deviation
+    df.loc[high_deviation, "ibpip_override_alert"] = True
+    df.loc[high_deviation, "ibpip_override_reason"] = "HIGH_DEVIATION_ESCALATION"
 
-    df.loc[break_mask, "ibpip_override_alert"] = True
-    df.loc[break_mask, "ibpip_override_reason"] = "HIGH_DEVIATION"
-
-    # STABLE BASELINE
-    stable_mask = (
+    # Suppression rule: stable relative to patient baseline
+    stable_suppression = (
+        (~warmup_mask) &
         (df["ibpip_state"] == "CAUTIOUS_BASELINE") &
-        (df["ibpip_score"] < 1.0) &
+        (df["ibpip_score"] < 0.75) &
         (df["ibpip_n_abnormal_signals"] == 0)
     )
 
-    df.loc[stable_mask, "ibpip_override_reason"] = "STABLE_BASELINE"
+    df.loc[stable_suppression, "ibpip_suppress_alert"] = True
+    df.loc[stable_suppression, "ibpip_override_reason"] = "SUPPRESSED_STABLE_BASELINE"
 
-    # REASSESSING / RECOVERY
-    reassessing_mask = df["ibpip_state"] == "REASSESSING"
+    # Recovery-aware suppression
+    recovery_suppression = (
+        (~warmup_mask) &
+        (df["ibpip_state"] == "REASSESSING") &
+        (df["ibpip_score"] < 0.90) &
+        (df["ibpip_n_abnormal_signals"] == 0)
+    )
 
-    improving_mask = reassessing_mask & (df["ibpip_score"] < 1.0)
+    df.loc[recovery_suppression, "ibpip_suppress_alert"] = True
+    df.loc[recovery_suppression, "ibpip_override_reason"] = "SUPPRESSED_RECOVERY_TREND"
 
-    df.loc[improving_mask, "ibpip_override_reason"] = "RECOVERY_TREND"
+    # Final alert decision
+    df[output_alert_col] = df[base_alert_col].copy()
 
-    # FINAL ALERT
-    df["final_ibpip_alert"] = df["bms_alert"].copy()
-
-    df.loc[df["ibpip_override_alert"], "final_ibpip_alert"] = True
+    # Suppress first, then allow strong escalation to override suppression
+    df.loc[df["ibpip_suppress_alert"], output_alert_col] = False
+    df.loc[df["ibpip_override_alert"], output_alert_col] = True
 
     return df
