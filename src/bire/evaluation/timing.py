@@ -107,3 +107,38 @@ def assign_episode_intelligence_type(
     )
 
     return df
+
+def assign_episode_tier(
+    df,
+    intelligence_col="episode_intelligence_type",
+    output_col="episode_tier",
+):
+    """
+    Assign WATCH / ESCALATE / URGENT episode tiers.
+
+    Mapping:
+    - INSTABILITY_WARNING -> WATCH
+    - NO_EVENT_WARNING -> WATCH
+    - DETERIORATION_ALERT -> ESCALATE
+    - POST_EVENT_ALERT -> URGENT
+    """
+
+    df = df.copy()
+
+    if intelligence_col not in df.columns:
+        raise ValueError(f"Missing required column: {intelligence_col}")
+
+    tier_map = {
+        "INSTABILITY_WARNING": "WATCH",
+        "NO_EVENT_WARNING": "WATCH",
+        "DETERIORATION_ALERT": "ESCALATE",
+        "POST_EVENT_ALERT": "URGENT",
+    }
+
+    df[output_col] = (
+        df[intelligence_col]
+        .map(tier_map)
+        .fillna("REVIEW")
+    )
+
+    return df
