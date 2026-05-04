@@ -120,6 +120,65 @@ def build_alert_episodes(
 
     return df
 
+def build_bms_aware_episodes(
+    df,
+    bms_mode_col="bms_mode",
+    alert_col="final_alert_with_velocity",
+    patient_col="patient_id",
+    time_col="timestamp",
+    cooldown_policy=None,
+    default_cooldown=12
+):
+    """
+    Build alert episodes using BMS-aware cooldown policy.
 
-# Example usage:
-# episodes_df = build_alert_episodes(episode_ready_df)
+    Parameters
+    ----------
+    df : pd.DataFrame
+    bms_mode_col : str
+    alert_col : str
+    patient_col : str
+    time_col : str
+    cooldown_policy : dict
+        Mapping of BMS mode → cooldown steps
+    default_cooldown : int
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+
+    import pandas as pd
+
+    if cooldown_policy is None:
+        cooldown_policy = {}
+
+    if bms_mode_col not in df.columns:
+        raise ValueError(f"Missing required column: {bms_mode_col}")
+
+    parts = []
+
+    for mode, mode_df in df.groupby(bms_mode_col):
+
+        cooldown_steps = cooldown_policy.get(mode, default_cooldown)
+
+        temp = build_alert_episodes(
+            mode_df.copy(),
+            alert_col=alert_col,
+            patient_col=patient_col,
+            time_col=time_col,
+            cooldown_steps=cooldown_steps
+        )
+
+        temp["bms_episode_cooldown_steps"] = cooldown_steps
+        temp["bms_episode_cooldown_minutes"] = cooldown_steps * 5
+
+        parts.append(temp)
+
+    out = (
+        pd.concat(parts, axis=0)
+        .sort_values([patient_col, time_col])
+        .reset_index(drop=True)
+    )
+
+    return out
