@@ -70,3 +70,40 @@ def evaluate_episode_timing(
     )
 
     return episode_starts
+
+def assign_episode_intelligence_type(
+    df,
+    timing_col="timing_category",
+    output_col="episode_intelligence_type",
+):
+    """
+    Assign higher-level BIRE intelligence type based on episode timing category.
+
+    This separates early instability detection from actionable deterioration alerts.
+
+    Mapping:
+    - early_beyond_horizon_episode -> INSTABILITY_WARNING
+    - true_predictive_episode -> DETERIORATION_ALERT
+    - post_event_episode -> POST_EVENT_ALERT
+    - no_event_episode -> NO_EVENT_WARNING
+    """
+
+    df = df.copy()
+
+    if timing_col not in df.columns:
+        raise ValueError(f"Missing required column: {timing_col}")
+
+    mapping = {
+        "early_beyond_horizon_episode": "INSTABILITY_WARNING",
+        "true_predictive_episode": "DETERIORATION_ALERT",
+        "post_event_episode": "POST_EVENT_ALERT",
+        "no_event_episode": "NO_EVENT_WARNING",
+    }
+
+    df[output_col] = (
+        df[timing_col]
+        .map(mapping)
+        .fillna("UNKNOWN_EPISODE_TYPE")
+    )
+
+    return df
