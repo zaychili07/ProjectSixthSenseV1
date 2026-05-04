@@ -1,5 +1,17 @@
 import pandas as pd
+
 # Used for chapter 29 - episode based alerting
+DEFAULT_BMS_COOLDOWN_POLICY = {
+    "ICU": 6,
+    "ER_ESI_1": 6,
+    "ER_ESI_2": 9,
+    "ER_ESI_3": 12,
+    "ER_ESI_4": 15,
+    "ER_ESI_5": 18,
+    "INPATIENT": 12,
+    "OUTPATIENT": 18,
+}
+
 def prepare_episode_dataframe(
     df,
     patient_col="patient_id",
@@ -131,27 +143,10 @@ def build_bms_aware_episodes(
 ):
     """
     Build alert episodes using BMS-aware cooldown policy.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-    bms_mode_col : str
-    alert_col : str
-    patient_col : str
-    time_col : str
-    cooldown_policy : dict
-        Mapping of BMS mode → cooldown steps
-    default_cooldown : int
-
-    Returns
-    -------
-    pd.DataFrame
     """
 
-    import pandas as pd
-
     if cooldown_policy is None:
-        cooldown_policy = {}
+        cooldown_policy = DEFAULT_BMS_COOLDOWN_POLICY
 
     if bms_mode_col not in df.columns:
         raise ValueError(f"Missing required column: {bms_mode_col}")
@@ -172,7 +167,6 @@ def build_bms_aware_episodes(
 
         temp["bms_episode_cooldown_steps"] = cooldown_steps
         temp["bms_episode_cooldown_minutes"] = cooldown_steps * 5
-
         parts.append(temp)
 
     out = (
