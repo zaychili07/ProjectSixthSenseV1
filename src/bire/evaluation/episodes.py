@@ -35,7 +35,7 @@ def build_alert_episodes(
     alert_col="final_alert_with_velocity",
     patient_col="patient_id",
     time_col="timestamp",
-    cooldown_steps=6
+    cooldown_steps=12
 ):
     """
     Converts row-level alerts into episode-based alerts.
