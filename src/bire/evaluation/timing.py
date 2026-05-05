@@ -114,13 +114,13 @@ def assign_episode_tier(
     output_col="episode_tier",
 ):
     """
-    Assign WATCH / ESCALATE / URGENT episode tiers.
+    Assign episode tiers with post-event monitoring policy.
 
     Mapping:
-    - INSTABILITY_WARNING -> WATCH
-    - NO_EVENT_WARNING -> WATCH
-    - DETERIORATION_ALERT -> ESCALATE
-    - POST_EVENT_ALERT -> URGENT
+    - INSTABILITY_WARNING → WATCH
+    - NO_EVENT_WARNING → WATCH
+    - DETERIORATION_ALERT → ESCALATE
+    - POST_EVENT_ALERT → MONITOR
     """
 
     df = df.copy()
@@ -132,7 +132,7 @@ def assign_episode_tier(
         "INSTABILITY_WARNING": "WATCH",
         "NO_EVENT_WARNING": "WATCH",
         "DETERIORATION_ALERT": "ESCALATE",
-        "POST_EVENT_ALERT": "URGENT",
+        "POST_EVENT_ALERT": "MONITOR",
     }
 
     df[output_col] = (
