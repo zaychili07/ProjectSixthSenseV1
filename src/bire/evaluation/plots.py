@@ -666,3 +666,120 @@ def plot_calibrated_risk_distributions(
     plt.ylabel("Row Count")
     plt.legend()
     plt.show()
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+
+def plot_bire_patient_timeline(
+    df,
+    patient_id=None,
+    tier_col="bire_final_tier",
+    score_col="bire_fi_score",
+    event_time_col="event_time",
+):
+    """
+    Plot BIRE tier progression and risk score for a single patient.
+
+    This visual confirms:
+    - ESCALATE / URGENT occur before event
+    - MONITOR occurs after event
+    """
+
+    plot_df = df.copy()
+    plot_df["timestamp"] = pd.to_datetime(plot_df["timestamp"])
+
+    # Auto-select patient with interesting signal
+    if patient_id is None:
+        priority_patients = (
+            plot_df[plot_df[tier_col].isin(["URGENT", "ESCALATE"])]
+            ["patient_id"]
+            .dropna()
+            .unique()
+        )
+
+        if len(priority_patients) > 0:
+            patient_id = priority_patients[0]
+        else:
+            patient_id = plot_df["patient_id"].iloc[0]
+
+    patient_df = (
+        plot_df[plot_df["patient_id"] == patient_id]
+        .sort_values("timestamp")
+        .copy()
+    )
+
+    tier_y_map = {
+        "SUPPRESSED_WATCH": 0,
+        "WATCH": 1,
+        "ESCALATE": 2,
+        "URGENT": 3,
+        "MONITOR": 4,
+    }
+
+    patient_df["tier_y"] = patient_df[tier_col].map(tier_y_map)
+
+    fig, ax1 = plt.subplots(figsize=(14, 6))
+
+    # Tier step plot
+    ax1.step(
+        patient_df["timestamp"],
+        patient_df["tier_y"],
+        where="post",
+        linewidth=2,
+        label="BIRE Tier",
+    )
+
+    ax1.scatter(
+        patient_df["timestamp"],
+        patient_df["tier_y"],
+        s=45,
+        label="Episodes",
+    )
+
+    ax1.set_yticks(list(tier_y_map.values()))
+    ax1.set_yticklabels(list(tier_y_map.keys()))
+    ax1.set_xlabel("Time")
+    ax1.set_ylabel("BIRE Tier")
+    ax1.set_title(f"BIRE Timeline — {patient_id}")
+    ax1.grid(True, alpha=0.3)
+
+    # Risk score line
+    ax2 = ax1.twinx()
+    ax2.plot(
+        patient_df["timestamp"],
+        patient_df[score_col],
+        linestyle="--",
+        linewidth=2,
+        label="BIRE-FI Score",
+    )
+    ax2.set_ylabel("BIRE-FI Score")
+    ax2.set_ylim(0, 1.05)
+
+    # Event markers
+    if event_time_col in patient_df.columns:
+        event_times = (
+            pd.to_datetime(patient_df[event_time_col])
+            .dropna()
+            .unique()
+        )
+
+        for event_time in event_times:
+            ax1.axvline(
+                event_time,
+                linestyle=":",
+                linewidth=2,
+                label="Deterioration Event",
+            )
+
+    # Legend
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper left")
+
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+    return patient_id
