@@ -783,3 +783,70 @@ def plot_bire_patient_timeline(
     plt.show()
 
     return patient_id
+
+def plot_bire_tier_transition_heatmap(
+    df,
+    patient_col="patient_id",
+    time_col="timestamp",
+    tier_col="bire_final_tier",
+):
+    """
+    Plot a heatmap showing BIRE tier transitions across patients over time.
+
+    Rows = patients
+    Columns = ordered episode timestamps
+    Values = BIRE tier severity level
+    """
+
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import numpy as np
+
+    plot_df = df.copy()
+    plot_df[time_col] = pd.to_datetime(plot_df[time_col])
+
+    tier_map = {
+        "SUPPRESSED_WATCH": 0,
+        "WATCH": 1,
+        "ESCALATE": 2,
+        "URGENT": 3,
+        "MONITOR": 4,
+    }
+
+    plot_df["tier_numeric"] = plot_df[tier_col].map(tier_map)
+
+    plot_df = plot_df.sort_values([patient_col, time_col])
+
+    plot_df["episode_order"] = plot_df.groupby(patient_col).cumcount()
+
+    heatmap_df = plot_df.pivot_table(
+        index=patient_col,
+        columns="episode_order",
+        values="tier_numeric",
+        aggfunc="first",
+    )
+
+    fig, ax = plt.subplots(figsize=(14, 8))
+
+    im = ax.imshow(
+        heatmap_df,
+        aspect="auto",
+        interpolation="nearest",
+    )
+
+    ax.set_title("BIRE Tier Transition Heatmap")
+    ax.set_xlabel("Episode Order")
+    ax.set_ylabel("Patient ID")
+
+    ax.set_yticks(range(len(heatmap_df.index)))
+    ax.set_yticklabels(heatmap_df.index)
+
+    cbar = plt.colorbar(im, ax=ax)
+    cbar.set_ticks(list(tier_map.values()))
+    cbar.set_ticklabels(list(tier_map.keys()))
+    cbar.set_label("BIRE Tier")
+
+    plt.tight_layout()
+    plt.show()
+
+    return heatmap_df
