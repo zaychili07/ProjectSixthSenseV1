@@ -129,11 +129,11 @@ def assign_episode_tier(
         raise ValueError(f"Missing required column: {intelligence_col}")
 
     tier_map = {
-        "INSTABILITY_WARNING": "WATCH",
-        "NO_EVENT_WARNING": "WATCH",
-        "DETERIORATION_ALERT": "ESCALATE",
-        "POST_EVENT_ALERT": "MONITOR",
-    }
+    "INSTABILITY_WARNING": "WATCH",
+    "NO_EVENT_WARNING": "WATCH",
+    "DETERIORATION_ALERT": "ESCALATE",
+    "POST_EVENT_ALERT": "MONITOR",   # ← THIS is the new addition to the post stack.
+}
 
     df[output_col] = (
         df[intelligence_col]
