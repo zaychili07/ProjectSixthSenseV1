@@ -71,13 +71,15 @@ def apply_watch_safety_override(
     # Step 1 — Apply WATCH gate
     # --------------------------------------------------
     out["episode_tier_gated"] = out["episode_tier"]
-
+    
     out.loc[
-        (out["episode_tier"] == "WATCH")
-        & (out["bire_fi_score"] < config.watch_gate_threshold),
-        "episode_tier_gated",
+    (out["episode_tier"] == "WATCH")
+    & (
+        out["bire_fi_score"].isna()
+        | (out["bire_fi_score"] < config.watch_gate_threshold)
+    ),
+    "episode_tier_gated",
     ] = "SUPPRESSED_WATCH"
-
     # --------------------------------------------------
     # Step 2 — Evidence completeness rule
     # --------------------------------------------------
