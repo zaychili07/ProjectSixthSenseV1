@@ -232,3 +232,68 @@ def summarize_re_escalation(df):
         summary["avg_risk"] = float(re_df["pred_proba"].mean())
 
     return summary
+
+def apply_critical_logic(
+    df,
+    high_risk_threshold=0.95,
+    risk_trend_threshold=0.05,
+    abnormal_threshold=3,
+    ibpip_threshold=3,
+):
+    """
+    Apply CRITICAL post-event logic.
+
+    CRITICAL represents severe failure to stabilize after an event.
+    It should only trigger when RE-ESCALATE is already active and
+    strong evidence supports continued deterioration.
+    """
+    df = df.copy()
+
+    required_cols = [
+        "bire_final_tier",
+        "pred_proba",
+        "risk_trend",
+        "abnormal_count",
+        "re_escalate_flag",
+    ]
+
+    missing = [col for col in required_cols if col not in df.columns]
+    if missing:
+        raise KeyError(f"Missing required columns for CRITICAL logic: {missing}")
+
+    has_ibpip = "ibpip_n_abnormal_signals" in df.columns
+
+    df["critical_flag"] = False
+    df["critical_reason"] = None
+
+    def decide(row):
+        if not row["re_escalate_flag"]:
+            return False, None
+
+        reasons = []
+
+        if row["pred_proba"] >= high_risk_threshold:
+            reasons.append("very_high_risk")
+
+        if row["risk_trend"] >= risk_trend_threshold:
+            reasons.append("continued_risk_acceleration")
+
+        if row["abnormal_count"] >= abnormal_threshold:
+            reasons.append("severe_multi_signal_instability")
+
+        if has_ibpip and row["ibpip_n_abnormal_signals"] >= ibpip_threshold:
+            reasons.append("ibpip_severe_instability")
+
+        if len(reasons) >= 2:
+            return True, "|".join(reasons)
+
+        return False, None
+
+    results = df.apply(lambda row: decide(row), axis=1)
+
+    df["critical_flag"] = [r[0] for r in results]
+    df["critical_reason"] = [r[1] for r in results]
+
+    df.loc[df["critical_flag"], "bire_final_tier"] = "CRITICAL"
+
+    return df
