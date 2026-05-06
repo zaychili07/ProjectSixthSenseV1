@@ -156,3 +156,79 @@ def summarize_monitor_states(df):
         summary["avg_abnormal_signals"] = float(monitor_df["abnormal_count"].mean())
 
     return summary
+
+def apply_re_escalation_logic(
+    df,
+    risk_trend_threshold=0.01,
+    abnormal_threshold=2,
+    ibpip_threshold=2,
+):
+    df = df.copy()
+
+    # Ensure required columns exist
+    required_cols = ["monitor_state", "risk_trend", "abnormal_count"]
+    for col in required_cols:
+        if col not in df.columns:
+            raise KeyError(f"Missing required column: {col}")
+
+    # IBPIP optional
+    has_ibpip = "ibpip_n_abnormal_signals" in df.columns
+
+    # Initialize
+    df["re_escalate_flag"] = False
+    df["re_escalate_reason"] = None
+
+    def decide(row):
+        if row["monitor_state"] != "DECLINING_MONITOR":
+            return False, None
+
+        reasons = []
+
+        if row["risk_trend"] > risk_trend_threshold:
+            reasons.append("rising_risk")
+
+        if row["abnormal_count"] >= abnormal_threshold:
+            reasons.append("multi_signal_instability")
+
+        if has_ibpip and row["ibpip_n_abnormal_signals"] >= ibpip_threshold:
+            reasons.append("ibpip_instability")
+
+        if len(reasons) == 0:
+            return False, None
+
+        return True, "|".join(reasons)
+
+    results = df.apply(lambda row: decide(row), axis=1)
+
+    df["re_escalate_flag"] = [r[0] for r in results]
+    df["re_escalate_reason"] = [r[1] for r in results]
+
+    # Update final tier
+    df.loc[df["re_escalate_flag"], "bire_final_tier"] = "RE-ESCALATE"
+
+    return df
+
+def summarize_re_escalation(df):
+    df = df.copy()
+
+    re_df = df[df["bire_final_tier"] == "RE-ESCALATE"]
+
+    summary = {
+        "total_re_escalations": int(len(re_df)),
+        "reason_distribution": {},
+        "avg_risk": None,
+    }
+
+    if re_df.empty:
+        return summary
+
+    summary["reason_distribution"] = (
+        re_df["re_escalate_reason"]
+        .value_counts(normalize=True)
+        .to_dict()
+    )
+
+    if "pred_proba" in re_df.columns:
+        summary["avg_risk"] = float(re_df["pred_proba"].mean())
+
+    return summary
