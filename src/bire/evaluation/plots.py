@@ -1,9 +1,6 @@
 import matplotlib.pyplot as plt
 
-
-# -------------------------------
 # Core trajectory plot (simple)
-# -------------------------------
 def plot_patient_risk_trajectory(
     df,
     patient_id,
