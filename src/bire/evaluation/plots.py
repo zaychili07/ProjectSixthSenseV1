@@ -847,3 +847,92 @@ def plot_bire_tier_transition_heatmap(
     plt.show()
 
     return heatmap_df
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+
+def plot_bire_lifecycle_timeline(
+    df,
+    patient_id,
+    time_col="timestamp",
+    risk_col="pred_proba",
+    tier_col="bire_final_tier",
+    event_col="event_now",
+    title=None,
+):
+    """
+    Plot full BIRE lifecycle timeline for one patient.
+
+    Shows:
+    - Risk trajectory
+    - Final BIRE tier/state
+    - Event markers
+    - Post-event escalation path
+    """
+
+    p = df[df["patient_id"] == patient_id].copy()
+
+    if p.empty:
+        raise ValueError(f"No rows found for patient_id={patient_id}")
+
+    required_cols = [time_col, risk_col, tier_col]
+    missing = [col for col in required_cols if col not in p.columns]
+    if missing:
+        raise KeyError(f"Missing required columns: {missing}")
+
+    p = p.sort_values(time_col)
+
+    tier_styles = {
+        "SUPPRESSED_WATCH": {"marker": "o", "label": "Suppressed Watch"},
+        "WATCH": {"marker": "o", "label": "Watch"},
+        "ESCALATE": {"marker": "^", "label": "Escalate"},
+        "URGENT": {"marker": "X", "label": "Urgent"},
+        "MONITOR": {"marker": "s", "label": "Monitor"},
+        "RE-ESCALATE": {"marker": "D", "label": "Re-escalate"},
+        "CRITICAL": {"marker": "*", "label": "Critical"},
+    }
+
+    plt.figure(figsize=(14, 5))
+
+    # Main risk line
+    plt.plot(
+        p[time_col],
+        p[risk_col],
+        linewidth=2,
+        label="BIRE Risk Score",
+    )
+
+    # Plot tiers
+    for tier, style in tier_styles.items():
+        subset = p[p[tier_col] == tier]
+
+        if not subset.empty:
+            plt.scatter(
+                subset[time_col],
+                subset[risk_col],
+                marker=style["marker"],
+                s=80 if tier != "CRITICAL" else 180,
+                label=style["label"],
+            )
+
+    # Event markers
+    if event_col in p.columns:
+        event_rows = p[p[event_col] == 1]
+
+        for event_time in event_rows[time_col]:
+            plt.axvline(
+                event_time,
+                linestyle="--",
+                linewidth=1,
+                alpha=0.6,
+            )
+
+    plt.title(title or f"BIRE Full Lifecycle Timeline — Patient {patient_id}")
+    plt.xlabel("Time")
+    plt.ylabel("Risk Score")
+    plt.ylim(0, 1.05)
+    plt.xticks(rotation=45)
+    plt.legend(loc="best")
+    plt.tight_layout()
+    plt.show()
