@@ -1159,3 +1159,138 @@ def plot_bire_lifecycle_heatmap(
 
     plt.tight_layout()
     plt.show()
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+
+def plot_bire_lifecycle_heatmap_with_timing(
+    df,
+    patient_ids=None,
+    patient_col="patient_id",
+    time_col="timestamp",
+    tier_col="bire_final_tier",
+    timing_col="timing_category",
+    max_patients=25,
+    title="BIRE Lifecycle Heatmap with Timing Categories",
+):
+    """
+    Plot BIRE lifecycle heatmap with timing category overlays.
+
+    Base color = final BIRE tier
+    Overlay marker = timing category
+    """
+
+    data = df.copy()
+
+    required_cols = [patient_col, time_col, tier_col, timing_col]
+    missing = [col for col in required_cols if col not in data.columns]
+    if missing:
+        raise KeyError(f"Missing required columns: {missing}")
+
+    data[time_col] = pd.to_datetime(data[time_col])
+    data = data.sort_values([patient_col, time_col])
+
+    if patient_ids is not None:
+        data = data[data[patient_col].isin(patient_ids)]
+    else:
+        patient_ids = (
+            data[patient_col]
+            .drop_duplicates()
+            .head(max_patients)
+            .tolist()
+        )
+        data = data[data[patient_col].isin(patient_ids)]
+
+    tier_map = {
+        "SUPPRESSED_WATCH": 0,
+        "WATCH": 1,
+        "ESCALATE": 2,
+        "URGENT": 3,
+        "MONITOR": 4,
+        "RE-ESCALATE": 5,
+        "CRITICAL": 6,
+    }
+
+    data["tier_numeric"] = data[tier_col].map(tier_map)
+    data["step"] = data.groupby(patient_col).cumcount()
+
+    heatmap_df = data.pivot_table(
+        index=patient_col,
+        columns="step",
+        values="tier_numeric",
+        aggfunc="max",
+    )
+
+    plt.figure(figsize=(17, max(5, len(heatmap_df) * 0.4)))
+
+    im = plt.imshow(
+        heatmap_df,
+        aspect="auto",
+        interpolation="nearest",
+    )
+
+    # Overlay timing category markers
+    timing_markers = {
+        "true_predictive_alert": "o",
+        "post_event_alert": "x",
+        "early_beyond_60_alert": "^",
+    }
+
+    timing_labels_used = set()
+
+    patient_to_y = {
+        patient_id: i for i, patient_id in enumerate(heatmap_df.index)
+    }
+
+    overlay_df = data[
+        data[timing_col].isin(timing_markers.keys())
+    ].copy()
+
+    for _, row in overlay_df.iterrows():
+        patient = row[patient_col]
+
+        if patient not in patient_to_y:
+            continue
+
+        x = row["step"]
+        y = patient_to_y[patient]
+        timing = row[timing_col]
+        marker = timing_markers[timing]
+
+        label = timing if timing not in timing_labels_used else None
+        timing_labels_used.add(timing)
+
+        plt.scatter(
+            x,
+            y,
+            marker=marker,
+            s=60,
+            facecolors="none",
+            edgecolors="black",
+            linewidths=1.5,
+            label=label,
+        )
+
+    plt.title(title)
+    plt.xlabel("Patient Timeline Step")
+    plt.ylabel("Patient ID")
+
+    plt.yticks(
+        ticks=np.arange(len(heatmap_df.index)),
+        labels=heatmap_df.index,
+    )
+
+    cbar = plt.colorbar(im)
+    cbar.set_ticks(list(tier_map.values()))
+    cbar.set_ticklabels(list(tier_map.keys()))
+
+    plt.legend(
+        title="Timing Category Overlay",
+        loc="upper right",
+        bbox_to_anchor=(1.25, 1),
+    )
+
+    plt.tight_layout()
+    plt.show()
