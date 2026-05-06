@@ -936,3 +936,138 @@ def plot_bire_lifecycle_timeline(
     plt.legend(loc="best")
     plt.tight_layout()
     plt.show()
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+
+def plot_bire_lifecycle_timeline(
+    df,
+    patient_id,
+    time_col="timestamp",
+    risk_col="pred_proba",
+    tier_col="bire_final_tier",
+    event_col="event_now",
+    lead_time_col="lead_time_min",
+    title=None,
+):
+    """
+    Plot full BIRE lifecycle timeline for one patient.
+
+    Shows:
+    - Risk trajectory
+    - Final BIRE tier/state
+    - Event marker
+    - Lead-time annotation
+    - Pre-event alert timing
+    """
+
+    p = df[df["patient_id"] == patient_id].copy()
+
+    if p.empty:
+        raise ValueError(f"No rows found for patient_id={patient_id}")
+
+    required_cols = [time_col, risk_col, tier_col]
+    missing = [col for col in required_cols if col not in p.columns]
+    if missing:
+        raise KeyError(f"Missing required columns: {missing}")
+
+    p[time_col] = pd.to_datetime(p[time_col])
+    p = p.sort_values(time_col)
+
+    tier_styles = {
+        "SUPPRESSED_WATCH": {"marker": "o", "label": "Suppressed Watch"},
+        "WATCH": {"marker": "o", "label": "Watch"},
+        "ESCALATE": {"marker": "^", "label": "Escalate"},
+        "URGENT": {"marker": "X", "label": "Urgent"},
+        "MONITOR": {"marker": "s", "label": "Monitor"},
+        "RE-ESCALATE": {"marker": "D", "label": "Re-escalate"},
+        "CRITICAL": {"marker": "*", "label": "Critical"},
+    }
+
+    plt.figure(figsize=(15, 5))
+
+    # Main risk trajectory
+    plt.plot(
+        p[time_col],
+        p[risk_col],
+        linewidth=2,
+        label="BIRE Risk Score",
+    )
+
+    # Tier markers
+    for tier, style in tier_styles.items():
+        subset = p[p[tier_col] == tier]
+
+        if not subset.empty:
+            plt.scatter(
+                subset[time_col],
+                subset[risk_col],
+                marker=style["marker"],
+                s=90 if tier != "CRITICAL" else 220,
+                label=style["label"],
+            )
+
+    # Event marker
+    event_time = None
+
+    if event_col in p.columns and p[event_col].eq(1).any():
+        event_time = p.loc[p[event_col] == 1, time_col].min()
+
+        plt.axvline(
+            event_time,
+            linestyle="--",
+            linewidth=2,
+            alpha=0.8,
+            label="Event",
+        )
+
+        plt.annotate(
+            "EVENT",
+            xy=(event_time, 1.0),
+            xytext=(event_time, 0.88),
+            arrowprops=dict(arrowstyle="->", linewidth=1.5),
+            ha="center",
+        )
+
+    # Lead-time annotation
+    if event_time is not None:
+        pre_event_alerts = p[
+            (p[time_col] < event_time)
+            & (p[tier_col].isin(["WATCH", "ESCALATE", "URGENT"]))
+        ]
+
+        if not pre_event_alerts.empty:
+            first_alert_time = pre_event_alerts[time_col].min()
+            first_alert_risk = pre_event_alerts.loc[
+                pre_event_alerts[time_col] == first_alert_time,
+                risk_col
+            ].iloc[0]
+
+            lead_time_minutes = int(
+                (event_time - first_alert_time).total_seconds() / 60
+            )
+
+            plt.axvspan(
+                first_alert_time,
+                event_time,
+                alpha=0.12,
+                label=f"Lead Time Window ({lead_time_minutes} min)",
+            )
+
+            plt.annotate(
+                f"First pre-event signal\nLead time: {lead_time_minutes} min",
+                xy=(first_alert_time, first_alert_risk),
+                xytext=(first_alert_time, min(first_alert_risk + 0.25, 0.95)),
+                arrowprops=dict(arrowstyle="->", linewidth=1.5),
+                ha="left",
+            )
+
+    plt.title(title or f"BIRE Full Lifecycle Timeline — Patient {patient_id}")
+    plt.xlabel("Time")
+    plt.ylabel("Risk Score")
+    plt.ylim(0, 1.05)
+    plt.xticks(rotation=45)
+    plt.legend(loc="best")
+    plt.tight_layout()
+    plt.show()
