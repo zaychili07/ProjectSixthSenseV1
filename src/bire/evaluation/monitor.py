@@ -56,3 +56,22 @@ def compute_monitor_states(df, window=3):
     df["monitor_state"] = df.apply(classify, axis=1)
 
     return df
+
+def summarize_monitor_states(df):
+    summary = {}
+
+    monitor_df = df[df["tier"] == "MONITOR"]
+
+    summary["total_monitor_rows"] = len(monitor_df)
+
+    summary["state_distribution"] = (
+        monitor_df["monitor_state"]
+        .value_counts(normalize=True)
+        .to_dict()
+    )
+
+    summary["avg_risk_in_monitor"] = monitor_df["pred_proba"].mean()
+
+    summary["avg_abnormal_signals"] = monitor_df["abnormal_count"].mean()
+
+    return summary
