@@ -1034,9 +1034,10 @@ def plot_bire_lifecycle_timeline(
     if event_time is not None:
         pre_event_alerts = p[
             (p[time_col] < event_time)
-            & (p[tier_col].isin(["WATCH", "ESCALATE", "URGENT"]))
+            & (p[risk_col] >= 0.4)
+        
         ]
-
+        
         if not pre_event_alerts.empty:
             first_alert_time = pre_event_alerts[time_col].min()
             first_alert_risk = pre_event_alerts.loc[
