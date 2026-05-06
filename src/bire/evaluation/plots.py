@@ -1072,3 +1072,90 @@ def plot_bire_lifecycle_timeline(
     plt.legend(loc="best")
     plt.tight_layout()
     plt.show()
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+
+def plot_bire_lifecycle_heatmap(
+    df,
+    patient_ids=None,
+    patient_col="patient_id",
+    time_col="timestamp",
+    tier_col="bire_final_tier",
+    max_patients=25,
+    title="BIRE Lifecycle State Heatmap",
+):
+    """
+    Plot a multi-patient lifecycle heatmap.
+
+    Shows final BIRE tier/state progression across time.
+    """
+
+    data = df.copy()
+
+    required_cols = [patient_col, time_col, tier_col]
+    missing = [col for col in required_cols if col not in data.columns]
+    if missing:
+        raise KeyError(f"Missing required columns: {missing}")
+
+    data[time_col] = pd.to_datetime(data[time_col])
+    data = data.sort_values([patient_col, time_col])
+
+    if patient_ids is not None:
+        data = data[data[patient_col].isin(patient_ids)]
+    else:
+        patient_ids = (
+            data[patient_col]
+            .drop_duplicates()
+            .head(max_patients)
+            .tolist()
+        )
+        data = data[data[patient_col].isin(patient_ids)]
+
+    tier_map = {
+        "SUPPRESSED_WATCH": 0,
+        "WATCH": 1,
+        "ESCALATE": 2,
+        "URGENT": 3,
+        "MONITOR": 4,
+        "RE-ESCALATE": 5,
+        "CRITICAL": 6,
+    }
+
+    data["tier_numeric"] = data[tier_col].map(tier_map)
+
+    # Create relative time index per patient
+    data["step"] = data.groupby(patient_col).cumcount()
+
+    heatmap_df = data.pivot_table(
+        index=patient_col,
+        columns="step",
+        values="tier_numeric",
+        aggfunc="max"
+    )
+
+    plt.figure(figsize=(16, max(5, len(heatmap_df) * 0.35)))
+
+    im = plt.imshow(
+        heatmap_df,
+        aspect="auto",
+        interpolation="nearest",
+    )
+
+    plt.title(title)
+    plt.xlabel("Patient Timeline Step")
+    plt.ylabel("Patient ID")
+
+    plt.yticks(
+        ticks=np.arange(len(heatmap_df.index)),
+        labels=heatmap_df.index
+    )
+
+    cbar = plt.colorbar(im)
+    cbar.set_ticks(list(tier_map.values()))
+    cbar.set_ticklabels(list(tier_map.keys()))
+
+    plt.tight_layout()
+    plt.show()
