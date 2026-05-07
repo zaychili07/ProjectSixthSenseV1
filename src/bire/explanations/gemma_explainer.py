@@ -1,10 +1,13 @@
 import pandas as pd
 
 
+# ============================================================
+# BIRE Gemma Explainer
+# Principle: BIRE decides. Gemma explains.
+# ============================================================
+
+
 def _safe_get(row, key, default=None):
-    """
-    Safely get a value from a pandas row/Series.
-    """
     try:
         value = row.get(key, default)
         if pd.isna(value):
@@ -14,19 +17,20 @@ def _safe_get(row, key, default=None):
         return default
 
 
-def _compress_path(values):
-    """
-    Compress repeated lifecycle states.
+def _round_value(value, digits=3):
+    if value is None:
+        return None
+    try:
+        return round(float(value), digits)
+    except Exception:
+        return value
 
-    Example:
-    WATCH, WATCH, URGENT, URGENT, CRITICAL
-    becomes:
-    WATCH → URGENT → CRITICAL
-    """
+
+def _compress_path(values):
     compressed = []
 
     for value in values:
-        if value is None:
+        if pd.isna(value):
             continue
 
         value = str(value)
@@ -37,27 +41,18 @@ def _compress_path(values):
     return compressed
 
 
-def _get_latest_vitals(latest):
-    """
-    Extract latest vital signs from the most recent patient row.
-    """
+def _get_latest_vitals(row):
     return {
-        "heart_rate": _safe_get(latest, "heart_rate", None),
-        "resp_rate": _safe_get(latest, "resp_rate", None),
-        "spo2": _safe_get(latest, "spo2", None),
-        "temperature": _safe_get(latest, "temperature", None),
-        "sbp": _safe_get(latest, "sbp", None),
-        "dbp": _safe_get(latest, "dbp", None),
+        "heart_rate": _safe_get(row, "heart_rate"),
+        "resp_rate": _safe_get(row, "resp_rate"),
+        "spo2": _safe_get(row, "spo2"),
+        "temperature": _safe_get(row, "temperature"),
+        "sbp": _safe_get(row, "sbp"),
+        "dbp": _safe_get(row, "dbp"),
     }
 
 
 def _detect_abnormal_findings(vitals):
-    """
-    Detect abnormal findings using BIRE's research thresholds.
-
-    These are not diagnostic thresholds.
-    They are signal thresholds used by the research prototype.
-    """
     findings = []
 
     hr = vitals.get("heart_rate")
@@ -67,38 +62,29 @@ def _detect_abnormal_findings(vitals):
     sbp = vitals.get("sbp")
 
     if hr is not None and hr > 120:
-        findings.append(f"elevated heart rate ({hr})")
+        findings.append(f"elevated heart rate: {hr:.1f}")
 
     if rr is not None and rr > 24:
-        findings.append(f"elevated respiratory rate ({rr})")
+        findings.append(f"elevated respiratory rate: {rr:.1f}")
 
     if spo2 is not None and spo2 < 92:
-        findings.append(f"low oxygen saturation / SpO2 ({spo2})")
+        findings.append(f"low SpO2: {spo2:.1f}")
 
     if sbp is not None and sbp < 100:
-        findings.append(f"low systolic blood pressure / SBP ({sbp})")
+        findings.append(f"low systolic BP: {sbp:.1f}")
 
     if temp is not None and (temp > 38.5 or temp < 36):
-        findings.append(f"abnormal temperature ({temp})")
+        findings.append(f"abnormal temperature: {temp:.1f}")
 
     return findings
 
 
-def build_patient_chart_context(patient_df):
+def build_patient_chart_context(patient_df, meaningful_risk_threshold=0.40):
     """
-    Build a clinician-readable patient chart context for Gemma.
+    Build a concise, clinician-readable context block from one patient's timeline.
 
-    This summarizes:
-    - Current BIRE tier
-    - Risk trajectory
-    - Latest vitals
-    - Abnormal findings
-    - Timing category
-    - Post-event status
-    - Lifecycle path
-
-    This function does NOT make clinical decisions.
-    It only summarizes BIRE outputs and available patient signals.
+    This summarizes BIRE outputs and observed signals.
+    It does not diagnose or recommend treatment.
     """
     p = patient_df.copy()
 
@@ -112,12 +98,12 @@ def build_patient_chart_context(patient_df):
     latest = p.iloc[-1]
 
     patient_id = _safe_get(latest, "patient_id", "UNKNOWN")
-
-    first_time = _safe_get(p.iloc[0], "timestamp", None)
-    last_time = _safe_get(latest, "timestamp", None)
+    first_time = _safe_get(p.iloc[0], "timestamp")
+    last_time = _safe_get(latest, "timestamp")
 
     final_tier = _safe_get(latest, "bire_final_tier", "UNKNOWN")
-    risk = _safe_get(latest, "pred_proba", None)
+    risk_score = _round_value(_safe_get(latest, "pred_proba"))
+    risk_trend = _round_value(_safe_get(latest, "risk_trend"))
 
     timing = _safe_get(
         latest,
@@ -125,26 +111,45 @@ def build_patient_chart_context(patient_df):
         _safe_get(latest, "timing_category", "unknown"),
     )
 
-    monitor_state = _safe_get(latest, "monitor_state", None)
-    re_reason = _safe_get(latest, "re_escalate_reason", None)
-    critical_reason = _safe_get(latest, "critical_reason", None)
-    decision_reason = _safe_get(latest, "bire_decision_reason", None)
+    monitor_state = _safe_get(latest, "monitor_state")
+    re_escalate_reason = _safe_get(latest, "re_escalate_reason")
+    critical_reason = _safe_get(latest, "critical_reason")
+    decision_reason = _safe_get(latest, "bire_decision_reason")
 
     # Risk trajectory
-    risk_start = _safe_get(p.iloc[0], "pred_proba", None)
-    risk_latest = risk
-    risk_max = p["pred_proba"].max() if "pred_proba" in p.columns else None
-    risk_min = p["pred_proba"].min() if "pred_proba" in p.columns else None
-    latest_risk_trend = _safe_get(latest, "risk_trend", None)
+    if "pred_proba" in p.columns:
+        starting_risk = _round_value(p["pred_proba"].iloc[0])
+        min_risk = _round_value(p["pred_proba"].min())
+        max_risk = _round_value(p["pred_proba"].max())
+    else:
+        starting_risk = min_risk = max_risk = None
 
-    # Event information
+    # Event and meaningful lead time
     event_count = int(p["event_now"].sum()) if "event_now" in p.columns else 0
-
     event_time = None
-    if "event_now" in p.columns and "timestamp" in p.columns and p["event_now"].eq(1).any():
+    first_meaningful_signal_time = None
+    meaningful_lead_time_minutes = None
+
+    if (
+        "event_now" in p.columns
+        and "timestamp" in p.columns
+        and "pred_proba" in p.columns
+        and p["event_now"].eq(1).any()
+    ):
         event_time = p.loc[p["event_now"] == 1, "timestamp"].min()
 
-    # Latest vitals + abnormal findings
+        pre_event_signal = p[
+            (p["timestamp"] < event_time)
+            & (p["pred_proba"] >= meaningful_risk_threshold)
+        ]
+
+        if not pre_event_signal.empty:
+            first_meaningful_signal_time = pre_event_signal["timestamp"].min()
+            meaningful_lead_time_minutes = int(
+                (event_time - first_meaningful_signal_time).total_seconds() / 60
+            )
+
+    # Vitals
     vitals = _get_latest_vitals(latest)
     abnormal_findings = _detect_abnormal_findings(vitals)
 
@@ -154,184 +159,143 @@ def build_patient_chart_context(patient_df):
         _safe_get(latest, "ibpip_n_abnormal_signals", len(abnormal_findings)),
     )
 
-    # Lifecycle path
+    # Lifecycle
     if "bire_final_tier" in p.columns:
-        tier_values = p["bire_final_tier"].dropna().astype(str).tolist()
+        lifecycle_values = p["bire_final_tier"].dropna().astype(str).tolist()
     else:
-        tier_values = []
+        lifecycle_values = []
 
-    compressed_path = _compress_path(tier_values)
-
-    # Meaningful pre-event signal lead time
-    meaningful_lead_time = None
-    first_meaningful_signal_time = None
-
-    if event_time is not None and "pred_proba" in p.columns and "timestamp" in p.columns:
-        meaningful_pre_event = p[
-            (p["timestamp"] < event_time)
-            & (p["pred_proba"] >= 0.40)
-        ]
-
-        if not meaningful_pre_event.empty:
-            first_meaningful_signal_time = meaningful_pre_event["timestamp"].min()
-            meaningful_lead_time = int(
-                (event_time - first_meaningful_signal_time).total_seconds() / 60
-            )
+    lifecycle_path = _compress_path(lifecycle_values)
 
     context = f"""
-Patient Chart Context:
-- Patient ID: {patient_id}
-- Timeline start: {first_time}
-- Timeline end: {last_time}
-- Events observed: {event_count}
-- Event time: {event_time}
-- First meaningful pre-event signal time: {first_meaningful_signal_time}
-- Meaningful lead time minutes: {meaningful_lead_time}
+PATIENT SNAPSHOT
+Patient ID: {patient_id}
+Timeline: {first_time} to {last_time}
+Events observed: {event_count}
+Event time: {event_time}
+Meaningful pre-event signal time: {first_meaningful_signal_time}
+Meaningful lead time: {meaningful_lead_time_minutes} minutes
 
-Current BIRE State:
-- Final tier: {final_tier}
-- Risk score: {risk_latest}
-- Timing category: {timing}
-- Monitor state: {monitor_state}
-- Re-escalation reason: {re_reason}
-- Critical reason: {critical_reason}
-- BIRE decision reason: {decision_reason}
+CURRENT BIRE STATE
+Final tier: {final_tier}
+Risk score: {risk_score}
+Risk trend: {risk_trend}
+Timing category: {timing}
+Monitor state: {monitor_state}
+Re-escalation reason: {re_escalate_reason}
+Critical reason: {critical_reason}
+BIRE decision reason: {decision_reason}
 
-Latest Vitals:
-- Heart rate: {vitals["heart_rate"]}
-- Respiratory rate: {vitals["resp_rate"]}
-- SpO2: {vitals["spo2"]}
-- Temperature: {vitals["temperature"]}
-- SBP: {vitals["sbp"]}
-- DBP: {vitals["dbp"]}
+LATEST VITALS
+Heart rate: {_round_value(vitals["heart_rate"], 1)}
+Respiratory rate: {_round_value(vitals["resp_rate"], 1)}
+SpO2: {_round_value(vitals["spo2"], 1)}
+Temperature: {_round_value(vitals["temperature"], 1)}
+SBP: {_round_value(vitals["sbp"], 1)}
+DBP: {_round_value(vitals["dbp"], 1)}
 
-Abnormal Findings:
-- Abnormal signal count: {abnormal_count}
-- Abnormal findings: {abnormal_findings}
+ABNORMAL FINDINGS
+Abnormal signal count: {abnormal_count}
+Abnormal findings: {abnormal_findings}
 
-Risk Trajectory:
-- Starting risk: {risk_start}
-- Minimum risk: {risk_min}
-- Maximum risk: {risk_max}
-- Latest risk trend: {latest_risk_trend}
+RISK TRAJECTORY
+Starting risk: {starting_risk}
+Minimum risk: {min_risk}
+Maximum risk: {max_risk}
+Latest risk trend: {risk_trend}
 
-Lifecycle Path:
-- {' → '.join(compressed_path)}
+LIFECYCLE PATH
+{" → ".join(lifecycle_path)}
 """
     return context.strip()
 
 
 def build_bire_patient_explanation_prompt(patient_df):
     """
-    Build a safe clinician-facing Gemma prompt for explaining
-    what is happening across a patient's BIRE timeline.
-
-    Gemma explains.
-    BIRE decides.
+    Build a prompt that forces Gemma to produce the finished clinical explanation,
+    not repeat the instructions.
     """
     chart_context = build_patient_chart_context(patient_df)
 
     prompt = f"""
-You are generating a clinician-facing explanation for BIRE, a research prototype clinical intelligence system.
+You are BIRE's clinician-facing explanation layer.
 
-Core principle:
-BIRE decides. You explain BIRE's decision.
+BIRE is a research prototype clinical intelligence system. BIRE has already made the decision.
+Your job is to explain the decision using the patient facts below.
 
-Important safety rules:
+Do not repeat these instructions.
+Do not repeat the template.
+Do not say what you are going to do.
+Write the completed explanation only.
+
+Safety boundaries:
 - Do not diagnose.
 - Do not recommend treatment.
-- Do not claim the system is clinically validated.
-- Do not say the patient definitely has a specific disease or condition.
-- Do not use alarming language beyond what the BIRE signal supports.
-- Explain what BIRE is observing from risk score, vitals, trajectory, timing, and system logic.
-- Use clear clinical-style language that a clinician or evaluator can quickly understand.
-- Be concise but useful.
+- Do not claim clinical validation.
+- Explain only BIRE's observed risk, vitals, trajectory, timing, and state logic.
 
+Patient facts:
 {chart_context}
 
-Write the explanation with this exact structure:
+Write the completed explanation now:
 
 1. Clinical summary:
-Briefly explain what BIRE is currently showing for this patient and why the clinician is looking at this case.
+BIRE is currently showing
 
 2. Current concern:
-Explain the current tier using the latest risk score, risk trend, abnormal findings, and escalation reason.
+The current concern is
 
 3. Timeline interpretation:
-Explain how the patient moved through the BIRE lifecycle over time.
+Over the timeline
 
 4. Post-event interpretation:
-If the patient is in MONITOR, RE-ESCALATE, or CRITICAL, explain what BIRE is observing after deterioration onset.
+After deterioration onset
 
 5. What to review:
-List the specific signals a clinician may want to review in the chart, without recommending treatment.
+The chart signals to review are
 
 6. Safety note:
-State that this is a research prototype explanation and not a diagnosis, clinical validation, or treatment recommendation.
+This explanation is generated by a research prototype
 """
     return prompt.strip()
 
 
 def build_bire_row_explanation_prompt(row):
     """
-    Build a safe Gemma prompt for explaining a single timestamp decision.
-
-    Useful for one CRITICAL, URGENT, RE-ESCALATE, or MONITOR row.
+    Build a Gemma prompt for one timestamp/row.
     """
-    tier = _safe_get(row, "bire_final_tier", "UNKNOWN")
-    risk = _safe_get(row, "pred_proba", None)
-    timing = _safe_get(row, "bire_timing", _safe_get(row, "timing_category", "unknown"))
-
-    initial_reason = _safe_get(row, "bire_decision_reason", None)
-    monitor_state = _safe_get(row, "monitor_state", None)
-    re_reason = _safe_get(row, "re_escalate_reason", None)
-    critical_reason = _safe_get(row, "critical_reason", None)
-
-    abnormal_count = _safe_get(
-        row,
-        "abnormal_count",
-        _safe_get(row, "ibpip_n_abnormal_signals", None),
-    )
-
-    risk_trend = _safe_get(row, "risk_trend", None)
-
     vitals = _get_latest_vitals(row)
     abnormal_findings = _detect_abnormal_findings(vitals)
 
+    tier = _safe_get(row, "bire_final_tier", "UNKNOWN")
+    risk = _round_value(_safe_get(row, "pred_proba"))
+    risk_trend = _round_value(_safe_get(row, "risk_trend"))
+    timing = _safe_get(row, "bire_timing", _safe_get(row, "timing_category", "unknown"))
+
     prompt = f"""
-You are generating a clinician-facing explanation for one BIRE timestamp.
+You are BIRE's clinician-facing explanation layer.
 
-Core principle:
-BIRE decides. You explain BIRE's decision.
+BIRE already assigned this timestamp. Explain the completed decision only.
+Do not repeat instructions. Do not diagnose. Do not recommend treatment.
 
-Important safety rules:
-- Do not diagnose.
-- Do not recommend treatment.
-- Do not claim clinical validation.
-- Explain only the BIRE signal, trajectory, vitals, and timing.
-- Use concise clinical-style language.
-
-BIRE Decision Context:
-- Final BIRE tier: {tier}
+Timestamp facts:
+- Final tier: {tier}
 - Risk score: {risk}
-- Timing category: {timing}
-- Initial system reasoning: {initial_reason}
-- Monitor state: {monitor_state}
-- Re-escalation reason: {re_reason}
-- Critical reason: {critical_reason}
-- Abnormal signal count: {abnormal_count}
-- Abnormal findings: {abnormal_findings}
 - Risk trend: {risk_trend}
+- Timing category: {timing}
+- Monitor state: {_safe_get(row, "monitor_state")}
+- Re-escalation reason: {_safe_get(row, "re_escalate_reason")}
+- Critical reason: {_safe_get(row, "critical_reason")}
+- BIRE decision reason: {_safe_get(row, "bire_decision_reason")}
+- Abnormal findings: {abnormal_findings}
+- Heart rate: {_round_value(vitals["heart_rate"], 1)}
+- Respiratory rate: {_round_value(vitals["resp_rate"], 1)}
+- SpO2: {_round_value(vitals["spo2"], 1)}
+- Temperature: {_round_value(vitals["temperature"], 1)}
+- SBP: {_round_value(vitals["sbp"], 1)}
+- DBP: {_round_value(vitals["dbp"], 1)}
 
-Latest Vitals:
-- Heart rate: {vitals["heart_rate"]}
-- Respiratory rate: {vitals["resp_rate"]}
-- SpO2: {vitals["spo2"]}
-- Temperature: {vitals["temperature"]}
-- SBP: {vitals["sbp"]}
-- DBP: {vitals["dbp"]}
-
-Write the explanation with this exact structure:
+Write the completed explanation:
 
 1. Clinical summary:
 2. Why BIRE flagged this:
@@ -344,10 +308,7 @@ Write the explanation with this exact structure:
 
 def build_bire_explanation_export(patient_df):
     """
-    Optional structured export for dashboards or logs.
-
-    This does not use Gemma.
-    It returns a structured dictionary from BIRE outputs.
+    Structured non-LLM export for dashboards/logging.
     """
     p = patient_df.copy()
 
@@ -370,28 +331,39 @@ def build_bire_explanation_export(patient_df):
 
     return {
         "patient_id": _safe_get(latest, "patient_id", "UNKNOWN"),
-        "latest_timestamp": _safe_get(latest, "timestamp", None),
+        "latest_timestamp": _safe_get(latest, "timestamp"),
         "final_tier": _safe_get(latest, "bire_final_tier", "UNKNOWN"),
-        "risk_score": _safe_get(latest, "pred_proba", None),
+        "risk_score": _round_value(_safe_get(latest, "pred_proba")),
+        "risk_trend": _round_value(_safe_get(latest, "risk_trend")),
         "timing_category": _safe_get(
             latest,
             "bire_timing",
             _safe_get(latest, "timing_category", "unknown"),
         ),
-        "monitor_state": _safe_get(latest, "monitor_state", None),
-        "re_escalate_reason": _safe_get(latest, "re_escalate_reason", None),
-        "critical_reason": _safe_get(latest, "critical_reason", None),
-        "risk_trend": _safe_get(latest, "risk_trend", None),
-        "latest_vitals": vitals,
+        "monitor_state": _safe_get(latest, "monitor_state"),
+        "re_escalate_reason": _safe_get(latest, "re_escalate_reason"),
+        "critical_reason": _safe_get(latest, "critical_reason"),
+        "latest_vitals": {
+            key: _round_value(value, 1) for key, value in vitals.items()
+        },
         "abnormal_findings": abnormal_findings,
         "lifecycle_path": _compress_path(tier_values),
     }
 
 
+# ============================================================
+# Gemma Transformers Loader + Runner
+# ============================================================
+
 def load_gemma_model(
-    model_name,
-    max_new_tokens=700,
+    model_name="/kaggle/input/models/google/gemma-4/transformers/gemma-4-e2b-it/1",
+    max_new_tokens=450,
 ):
+    """
+    Load Gemma using HuggingFace Transformers.
+
+    Use the Google Transformers Kaggle model path, not the Keras path.
+    """
     from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
     import torch
 
@@ -407,21 +379,20 @@ def load_gemma_model(
         "text-generation",
         model=model,
         tokenizer=tokenizer,
-        max_new_tokens=max_new_tokens,
-        do_sample=False,
         return_full_text=False,
+        max_new_tokens=max_new_tokens,
     )
 
     return generator
 
 
-def run_gemma_explanation(prompt, generator):
+def run_gemma_explanation(prompt, generator, max_new_tokens=450):
     """
-    Run Gemma explanation generation and clean output.
-    """
+    Generate clinician-facing BIRE explanation from Gemma.
 
-    formatted_prompt = f"""
-<start_of_turn>user
+    Uses Gemma turn formatting and removes formatting artifacts.
+    """
+    formatted_prompt = f"""<start_of_turn>user
 {prompt}
 <end_of_turn>
 <start_of_turn>model
@@ -429,22 +400,24 @@ def run_gemma_explanation(prompt, generator):
 
     response = generator(
         formatted_prompt,
-        max_new_tokens=700,
+        max_new_tokens=max_new_tokens,
         do_sample=False,
-        temperature=None,
-        top_p=None,
-        top_k=None,
         clean_up_tokenization_spaces=False,
     )
 
     if isinstance(response, list) and len(response) > 0:
         text = response[0].get("generated_text", "").strip()
 
-        # Remove Gemma formatting remnants
-        text = text.replace("<start_of_turn>model", "")
-        text = text.replace("<end_of_turn>", "")
-        text = text.strip()
+        cleanup_tokens = [
+            "<start_of_turn>model",
+            "<start_of_turn>user",
+            "<end_of_turn>",
+            "---<turn|>",
+        ]
 
-        return text
+        for token in cleanup_tokens:
+            text = text.replace(token, "")
+
+        return text.strip()
 
     return str(response)
