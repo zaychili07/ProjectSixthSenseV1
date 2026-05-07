@@ -458,3 +458,53 @@ def run_gemma_explanation(
         text = text.replace(token, "")
 
     return text.strip()
+
+def clean_gemma_clinical_output(text):
+    """
+    Clean Gemma output for clinician-facing display.
+    Removes HTML, LaTeX artifacts, turn tokens, and self-correction notes.
+    """
+
+    if text is None:
+        return ""
+
+    text = str(text)
+
+    replacements = {
+        "<strong>": "",
+        "</strong>": "",
+        "<br>": "\n",
+        "<br/>": "\n",
+        "<br />": "\n",
+        "$\\text{SpO}_2$": "SpO2",
+        "$\\text{SPO}_2$": "SpO2",
+        "\\text{SpO}_2": "SpO2",
+        "\\text{SPO}_2": "SpO2",
+        "$": "",
+        "\\_": "_",
+        "<turn|>": "",
+        "<eos>": "",
+    }
+
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    # Remove self-correction style lines
+    lines = []
+    for line in text.splitlines():
+        lowered = line.lower()
+        if "self-correction" in lowered:
+            continue
+        if "provided data shows" in lowered:
+            continue
+        if "interpreting the trend" in lowered:
+            continue
+        lines.append(line)
+
+    text = "\n".join(lines)
+
+    # Normalize extra whitespace
+    while "\n\n\n" in text:
+        text = text.replace("\n\n\n", "\n\n")
+
+    return text.strip()
