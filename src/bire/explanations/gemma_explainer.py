@@ -386,3 +386,53 @@ def build_bire_explanation_export(patient_df):
         "abnormal_findings": abnormal_findings,
         "lifecycle_path": _compress_path(tier_values),
     }
+
+
+# Gemma Clinical Explanation Runner
+def load_gemma_model(
+    model_name="/kaggle/input/gemma/transformers/2b-it/2",
+    max_new_tokens=500,
+):
+    """
+    Load Gemma for clinical-style BIRE explanations.
+
+    Default path is a common Kaggle Gemma model path.
+    Adjust model_name if your Kaggle input path is different.
+    """
+    from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+    import torch
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        torch_dtype=torch.float16,
+        device_map="auto",
+    )
+
+    generator = pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        max_new_tokens=max_new_tokens,
+        do_sample=False,
+        temperature=0.2,
+        return_full_text=False,
+    )
+
+    return generator
+
+
+def run_gemma_explanation(
+    prompt,
+    generator,
+):
+    """
+    Run Gemma on a BIRE explanation prompt.
+    """
+    response = generator(prompt)
+
+    if isinstance(response, list) and len(response) > 0:
+        return response[0].get("generated_text", "").strip()
+
+    return str(response)
