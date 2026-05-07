@@ -394,20 +394,14 @@ def load_gemma_model(
     return generator
 
 
-def run_gemma_explanation(prompt, generator, max_new_tokens=450):
+def run_gemma_explanation(prompt, generator, max_new_tokens=500):
     """
     Generate clinician-facing BIRE explanation from Gemma.
-
-    Uses Gemma turn formatting and removes formatting artifacts.
+    Simple version: no manual chat tokens.
     """
-    formatted_prompt = f"""<start_of_turn>user
-{prompt}
-<end_of_turn>
-<start_of_turn>model
-"""
 
     response = generator(
-        formatted_prompt,
+        prompt,
         max_new_tokens=max_new_tokens,
         do_sample=False,
         clean_up_tokenization_spaces=False,
@@ -416,13 +410,14 @@ def run_gemma_explanation(prompt, generator, max_new_tokens=450):
     if isinstance(response, list) and len(response) > 0:
         text = response[0].get("generated_text", "").strip()
 
-       cleanup_tokens = [
+        cleanup_tokens = [
             "<start_of_turn>model",
             "<start_of_turn>user",
             "<end_of_turn>",
             "---<turn|>",
             "<turn|>",
-]
+            "<eos>",
+        ]
 
         for token in cleanup_tokens:
             text = text.replace(token, "")
