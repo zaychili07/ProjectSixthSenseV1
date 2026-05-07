@@ -388,17 +388,10 @@ def build_bire_explanation_export(patient_df):
     }
 
 
-# Gemma Clinical Explanation Runner
 def load_gemma_model(
-    model_name="/kaggle/input/gemma/transformers/2b-it/2",
-    max_new_tokens=500,
+    model_name,
+    max_new_tokens=700,
 ):
-    """
-    Load Gemma for clinical-style BIRE explanations.
-
-    Default path is a common Kaggle Gemma model path.
-    Adjust model_name if your Kaggle input path is different.
-    """
     from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
     import torch
 
@@ -416,50 +409,16 @@ def load_gemma_model(
         tokenizer=tokenizer,
         max_new_tokens=max_new_tokens,
         do_sample=False,
-        temperature=0.2,
         return_full_text=False,
     )
 
     return generator
 
 
-def run_gemma_explanation(
-    prompt,
-    generator,
-):
-    """
-    Run Gemma on a BIRE explanation prompt.
-    """
+def run_gemma_explanation(prompt, generator):
     response = generator(prompt)
 
     if isinstance(response, list) and len(response) > 0:
         return response[0].get("generated_text", "").strip()
 
     return str(response)
-
-def load_gemma4_keras_model(
-    model_path="/kaggle/input/models/keras/gemma4/keras/gemma4_instruct_2b/2",
-):
-    """
-    Load Kaggle/Keras Gemma 4 Instruct model.
-    """
-    import keras_hub
-
-    gemma = keras_hub.models.GemmaCausalLM.from_preset(model_path)
-    return gemma
-
-
-def run_gemma4_explanation(
-    prompt,
-    gemma_model,
-    max_length=700,
-):
-    """
-    Run Gemma 4 on a BIRE explanation prompt.
-    """
-    response = gemma_model.generate(
-        prompt,
-        max_length=max_length,
-    )
-
-    return str(response).strip()
