@@ -1,174 +1,116 @@
-# ============================================================
-# BIRE Gemma Clinical Assistant Layer
-# ============================================================
-
-import json
-import torch
-from transformers import AutoProcessor, AutoModelForMultimodalLM
+import pandas as pd
 
 
-GEMMA_MODEL_ID = "google/gemma-4-E2B-it"
+def _safe_get(row, key, default=None):
+    try:
+        value = row.get(key, default)
+        if pd.isna(value):
+            return default
+        return value
+    except Exception:
+        return default
 
 
-def load_gemma_explainer():
+def build_patient_chart_context(patient_df):
     """
-    Load Gemma model and processor.
+    Build a compact patient chart summary from the patient's timeline.
+
+    This does NOT make clinical decisions.
+    It only summarizes BIRE outputs and signal trends for Gemma.
     """
-    gemma_processor = AutoProcessor.from_pretrained(GEMMA_MODEL_ID)
+    p = patient_df.copy()
 
-    gemma_model = AutoModelForMultimodalLM.from_pretrained(
-        GEMMA_MODEL_ID,
-        torch_dtype="auto",
-        device_map="auto",
-    )
+    if p.empty:
+        raise ValueError("patient_df is empty.")
 
-    return gemma_processor, gemma_model
+    if "timestamp" in p.columns:
+        p["timestamp"] = pd.to_datetime(p["timestamp"])
+        p = p.sort_values("timestamp")
 
-SYSTEM_PROMPT = """You are BIRE-Assist, an advanced clinical decision-support assistant for early detection of patient deterioration.
+    latest = p.iloc[-1]
 
-You interpret structured outputs from a system that combines:
-- machine learning risk prediction
-- GSS alert-control logic
-- timing-aware evaluation
-- decision-context signals for clinical workflows
+    patient_id = _safe_get(latest, "patient_id", "UNKNOWN")
 
-You will receive:
-- risk_score and risk_band
-- alert_status
-- suppressed_status
-- gss_action
-- gss_priority
-- escalation_reason
-- timing_category, which describes when the alert occurred relative to a deterioration event
+    first_time = _safe_get(p.iloc[0], "timestamp", None)
+    last_time = _safe_get(latest, "timestamp", None)
 
-Your job:
-- Explain BOTH the patient’s physiological risk AND the system’s decision-making
-- Clarify why an alert was triggered or suppressed
-- Provide clinically meaningful context that supports bedside situational awareness
+    final_tier = _safe_get(latest, "bire_final_tier", "UNKNOWN")
+    risk = _safe_get(latest, "pred_proba", None)
+    timing = _safe_get(latest, "bire_timing", _safe_get(latest, "timing_category", "unknown"))
 
-Guidelines:
-- Do NOT diagnose
-- Do NOT invent values, vitals, or trends
-- Stay grounded only in provided fields
-- Use cautious clinical language
-- Avoid bland explanations. Do not simply say "high risk requires attention." Explain what the system decision means in context using the available fields.
+    monitor_state = _safe_get(latest, "monitor_state", None)
+    re_reason = _safe_get(latest, "re_escalate_reason", None)
+    critical_reason = _safe_get(latest, "critical_reason", None)
+    decision_reason = _safe_get(latest, "bire_decision_reason", None)
 
-Timing interpretation rules:
-- If timing_category is "true_predictive_alert", state that the alert appears to occur before deterioration and may support earlier reassessment.
-- If timing_category is "post_event_alert", state that deterioration may already be underway and the system may be reflecting ongoing instability rather than early warning.
-- If timing_category is "early_beyond_60_alert", state that the signal appears early but its immediate clinical relevance is uncertain.
-- If timing_category is missing, None, or null, do not mention timing.
+    risk_start = _safe_get(p.iloc[0], "pred_proba", None)
+    risk_max = p["pred_proba"].max() if "pred_proba" in p.columns else None
+    risk_min = p["pred_proba"].min() if "pred_proba" in p.columns else None
 
-Required output format:
-Risk Summary: one concise sentence.
-System Decision: one concise sentence explaining the GSS action.
-Clinical Interpretation: one concise sentence explaining what the timing and system behavior may mean.
-Next Step: one cautious sentence recommending monitoring or reassessment.
-Limitation: one sentence stating that this is supportive model output and not a diagnosis or treatment recommendation.
-
-Keep total output under 210 words.
-"""
-
-def build_bire_gss_output(row):
-    """
-    Build Gemma-ready structured input from a BIRE/GSS v2.8 context row.
-    """
-
-    risk_score = float(row.get("pred_proba", 0.0))
-
-    if risk_score >= 0.80:
-        risk_band = "HIGH"
-    elif risk_score >= 0.50:
-        risk_band = "MODERATE"
+    if "risk_trend" in p.columns:
+        latest_risk_trend = _safe_get(latest, "risk_trend", None)
     else:
-        risk_band = "LOW"
+        latest_risk_trend = None
 
-    return {
-        "patient_id": row.get("patient_id", None),
-        "timestamp": str(row.get("timestamp", "")),
-        "risk_score": risk_score,
-        "risk_band": risk_band,
-        "alert_status": bool(row.get("gss_v27_alert", False)),
-        "suppressed_status": bool(row.get("gss_v27_suppressed", False)),
-        "gss_action": row.get("gss_action", None),
-        "gss_priority": row.get("gss_priority", None),
-        "escalation_reason": row.get("gss_v27_escalation_reason", None),
-        "timing_category": row.get("timing_category", None),
-    }
+    if "abnormal_count" in p.columns:
+        abnormal_count = _safe_get(latest, "abnormal_count", None)
+    else:
+        abnormal_count = _safe_get(latest, "ibpip_n_abnormal_signals", None)
 
+    event_count = int(p["event_now"].sum()) if "event_now" in p.columns else 0
 
-def explain_with_gemma(
-    bire_output,
-    gemma_model,
-    gemma_processor,
-    max_new_tokens=180,
-):
-    """
-    Generate a concise clinical decision-support explanation from structured BIRE/GSS output.
-    """
-
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {
-            "role": "user",
-            "content": (
-                "Provide a concise clinical explanation of this BIRE/GSS decision-context output. "
-                "Use the required five-part format exactly. "
-                "Stay grounded only in the provided fields.\n\n"
-                f"{json.dumps(bire_output, indent=2)}"
-            ),
-        },
-    ]
-
-    text = gemma_processor.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True,
-        enable_thinking=False,
+    tier_path = (
+        p["bire_final_tier"]
+        .dropna()
+        .astype(str)
+        .tolist()
+        if "bire_final_tier" in p.columns
+        else []
     )
 
-    inputs = gemma_processor(
-        text=text,
-        return_tensors="pt",
-    ).to(gemma_model.device)
+    compressed_path = []
+    for tier in tier_path:
+        if not compressed_path or compressed_path[-1] != tier:
+            compressed_path.append(tier)
 
-    input_len = inputs["input_ids"].shape[-1]
+    context = f"""
+Patient Chart Context:
+- Patient ID: {patient_id}
+- Timeline start: {first_time}
+- Timeline end: {last_time}
+- Events observed: {event_count}
 
-    with torch.no_grad():
-        outputs = gemma_model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            do_sample=False,
-            top_p=1.0,
-            top_k=50,
-        )
+Current BIRE State:
+- Final tier: {final_tier}
+- Risk score: {risk}
+- Timing category: {timing}
+- Monitor state: {monitor_state}
+- Re-escalation reason: {re_reason}
+- Critical reason: {critical_reason}
+- BIRE decision reason: {decision_reason}
 
-    response = gemma_processor.decode(
-        outputs[0][input_len:],
-        skip_special_tokens=True,
-    )
+Risk Trajectory:
+- Starting risk: {risk_start}
+- Minimum risk: {risk_min}
+- Maximum risk: {risk_max}
+- Latest risk trend: {latest_risk_trend}
+- Latest abnormal signal count: {abnormal_count}
 
-    return " ".join(response.split())
+Lifecycle Path:
+- {' → '.join(compressed_path)}
+"""
+    return context.strip()
 
-def build_bire_gemma_prompt(row):
+
+def build_bire_patient_explanation_prompt(patient_df):
     """
-    Build a safe clinical-style explanation prompt for BIRE output.
+    Build a safe Gemma prompt for explaining what is happening
+    across a patient's BIRE chart/timeline.
 
-    Gemma should explain the BIRE decision.
-    Gemma should not diagnose or recommend treatment.
+    Gemma explains.
+    BIRE decides.
     """
-
-    tier = row.get("bire_final_tier", "UNKNOWN")
-    risk = row.get("pred_proba", None)
-    timing = row.get("bire_timing", row.get("timing_category", "unknown"))
-    reason = row.get("bire_decision_reason", None)
-
-    monitor_state = row.get("monitor_state", None)
-    re_reason = row.get("re_escalate_reason", None)
-    critical_reason = row.get("critical_reason", None)
-
-    abnormal_count = row.get("abnormal_count", row.get("ibpip_n_abnormal_signals", None))
-    risk_trend = row.get("risk_trend", None)
+    chart_context = build_patient_chart_context(patient_df)
 
     prompt = f"""
 You are explaining the output of BIRE, a research prototype clinical intelligence system.
@@ -177,15 +119,69 @@ Important rules:
 - Do not diagnose.
 - Do not recommend treatment.
 - Do not claim the system is clinically validated.
-- Explain the risk state clearly and cautiously.
+- Do not say the patient definitely has a condition.
+- Explain the system state cautiously and clearly.
+- Focus only on risk score, trajectory, timing, vitals instability, and BIRE decision logic.
 - Use concise clinical-style language.
+- Make it understandable to a clinical reviewer or project evaluator.
+
+Core principle:
+BIRE decides. You explain BIRE's decision.
+
+{chart_context}
+
+Write the explanation with this exact structure:
+
+1. Summary:
+Explain what BIRE is currently showing for this patient.
+
+2. Timeline interpretation:
+Explain how the patient moved through the BIRE lifecycle.
+
+3. Why BIRE flagged this:
+Explain the signals supporting the current tier.
+
+4. Post-event interpretation:
+If the patient is in MONITOR, RE-ESCALATE, or CRITICAL, explain what BIRE is observing after deterioration onset.
+
+5. Safety note:
+State that this is a research prototype explanation and not a diagnosis or treatment recommendation.
+"""
+    return prompt.strip()
+
+
+def build_bire_row_explanation_prompt(row):
+    """
+    Build a safe explanation prompt for one row/timestamp.
+    Useful for explaining a single CRITICAL, URGENT, or RE-ESCALATE decision.
+    """
+    tier = _safe_get(row, "bire_final_tier", "UNKNOWN")
+    risk = _safe_get(row, "pred_proba", None)
+    timing = _safe_get(row, "bire_timing", _safe_get(row, "timing_category", "unknown"))
+
+    initial_reason = _safe_get(row, "bire_decision_reason", None)
+    monitor_state = _safe_get(row, "monitor_state", None)
+    re_reason = _safe_get(row, "re_escalate_reason", None)
+    critical_reason = _safe_get(row, "critical_reason", None)
+
+    abnormal_count = _safe_get(row, "abnormal_count", _safe_get(row, "ibpip_n_abnormal_signals", None))
+    risk_trend = _safe_get(row, "risk_trend", None)
+
+    prompt = f"""
+You are explaining a single BIRE decision from a research prototype clinical intelligence system.
+
+Important rules:
+- Do not diagnose.
+- Do not recommend treatment.
+- Do not claim the system is clinically validated.
+- Explain the risk state clearly and cautiously.
 - Focus on signals, trajectory, timing, and system reasoning.
 
-Patient/System Context:
+BIRE Decision Context:
 - Final BIRE tier: {tier}
 - Risk score: {risk}
 - Timing category: {timing}
-- BIRE decision reason: {reason}
+- Initial system reasoning: {initial_reason}
 - Monitor state: {monitor_state}
 - Re-escalation reason: {re_reason}
 - Critical reason: {critical_reason}
@@ -199,5 +195,4 @@ Write a concise explanation with this structure:
 3. Timing interpretation:
 4. Safety note:
 """
-
     return prompt.strip()
