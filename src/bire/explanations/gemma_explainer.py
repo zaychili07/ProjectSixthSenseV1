@@ -436,3 +436,30 @@ def run_gemma_explanation(
         return response[0].get("generated_text", "").strip()
 
     return str(response)
+
+def load_gemma4_keras_model(
+    model_path="/kaggle/input/models/keras/gemma4/keras/gemma4_instruct_2b/2",
+):
+    """
+    Load Kaggle/Keras Gemma 4 Instruct model.
+    """
+    import keras_hub
+
+    gemma = keras_hub.models.GemmaCausalLM.from_preset(model_path)
+    return gemma
+
+
+def run_gemma4_explanation(
+    prompt,
+    gemma_model,
+    max_length=700,
+):
+    """
+    Run Gemma 4 on a BIRE explanation prompt.
+    """
+    response = gemma_model.generate(
+        prompt,
+        max_length=max_length,
+    )
+
+    return str(response).strip()
