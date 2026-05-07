@@ -149,3 +149,55 @@ def explain_with_gemma(
     )
 
     return " ".join(response.split())
+
+def build_bire_gemma_prompt(row):
+    """
+    Build a safe clinical-style explanation prompt for BIRE output.
+
+    Gemma should explain the BIRE decision.
+    Gemma should not diagnose or recommend treatment.
+    """
+
+    tier = row.get("bire_final_tier", "UNKNOWN")
+    risk = row.get("pred_proba", None)
+    timing = row.get("bire_timing", row.get("timing_category", "unknown"))
+    reason = row.get("bire_decision_reason", None)
+
+    monitor_state = row.get("monitor_state", None)
+    re_reason = row.get("re_escalate_reason", None)
+    critical_reason = row.get("critical_reason", None)
+
+    abnormal_count = row.get("abnormal_count", row.get("ibpip_n_abnormal_signals", None))
+    risk_trend = row.get("risk_trend", None)
+
+    prompt = f"""
+You are explaining the output of BIRE, a research prototype clinical intelligence system.
+
+Important rules:
+- Do not diagnose.
+- Do not recommend treatment.
+- Do not claim the system is clinically validated.
+- Explain the risk state clearly and cautiously.
+- Use concise clinical-style language.
+- Focus on signals, trajectory, timing, and system reasoning.
+
+Patient/System Context:
+- Final BIRE tier: {tier}
+- Risk score: {risk}
+- Timing category: {timing}
+- BIRE decision reason: {reason}
+- Monitor state: {monitor_state}
+- Re-escalation reason: {re_reason}
+- Critical reason: {critical_reason}
+- Abnormal signal count: {abnormal_count}
+- Risk trend: {risk_trend}
+
+Write a concise explanation with this structure:
+
+1. Summary:
+2. Why BIRE flagged this:
+3. Timing interpretation:
+4. Safety note:
+"""
+
+    return prompt.strip()
