@@ -416,9 +416,35 @@ def load_gemma_model(
 
 
 def run_gemma_explanation(prompt, generator):
-    response = generator(prompt)
+    """
+    Run Gemma explanation generation and clean output.
+    """
+
+    formatted_prompt = f"""
+<start_of_turn>user
+{prompt}
+<end_of_turn>
+<start_of_turn>model
+"""
+
+    response = generator(
+        formatted_prompt,
+        max_new_tokens=700,
+        do_sample=False,
+        temperature=None,
+        top_p=None,
+        top_k=None,
+        clean_up_tokenization_spaces=False,
+    )
 
     if isinstance(response, list) and len(response) > 0:
-        return response[0].get("generated_text", "").strip()
+        text = response[0].get("generated_text", "").strip()
+
+        # Remove Gemma formatting remnants
+        text = text.replace("<start_of_turn>model", "")
+        text = text.replace("<end_of_turn>", "")
+        text = text.strip()
+
+        return text
 
     return str(response)
