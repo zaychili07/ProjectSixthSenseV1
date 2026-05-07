@@ -416,12 +416,13 @@ def run_gemma_explanation(prompt, generator, max_new_tokens=450):
     if isinstance(response, list) and len(response) > 0:
         text = response[0].get("generated_text", "").strip()
 
-        cleanup_tokens = [
+       cleanup_tokens = [
             "<start_of_turn>model",
             "<start_of_turn>user",
             "<end_of_turn>",
             "---<turn|>",
-        ]
+            "<turn|>",
+]
 
         for token in cleanup_tokens:
             text = text.replace(token, "")
