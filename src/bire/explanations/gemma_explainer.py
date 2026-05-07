@@ -215,9 +215,10 @@ def build_bire_patient_explanation_prompt(patient_df):
     Build a prompt that forces Gemma to produce a clinically useful explanation
     using the actual numbers and abnormal findings.
     """
+
     chart_context = build_patient_chart_context(patient_df)
 
-   prompt = f"""
+    prompt = f"""
 You are writing a clinician-facing explanation for BIRE.
 
 BIRE is a research prototype. It has already assigned the patient state.
@@ -243,9 +244,9 @@ Include:
 
 Clinical explanation:
 """
-return prompt.strip()
 
-
+    return prompt.strip()
+    
 def build_bire_row_explanation_prompt(row):
     """
     Build a Gemma prompt for one timestamp/row.
