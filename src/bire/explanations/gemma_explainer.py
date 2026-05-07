@@ -454,8 +454,10 @@ def run_gemma_explanation(
         "<eos>",
     ]
 
-    for token in cleanup_tokens:
-        text = text.replace(token, "")
+   for token in cleanup_tokens:
+       text = text.replace(token, "")
+
+    text = clean_gemma_clinical_output(text)
 
     return text.strip()
 
