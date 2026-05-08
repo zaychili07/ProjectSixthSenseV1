@@ -209,6 +209,10 @@ def build_patient_chart_context(
 
     abnormal_findings = _detect_abnormal_findings(vitals)
 
+    abnormal_findings_text = "\n".join(
+        [f"- {x}" for x in abnormal_findings]
+    )
+
     abnormal_count = _safe_get(
         latest,
         "abnormal_count",
@@ -237,7 +241,8 @@ def build_patient_chart_context(
     temp = _round_value(vitals["temperature"], 1)
     sbp = _round_value(vitals["sbp"], 1)
     dbp = _round_value(vitals["dbp"], 1)
-
+    
+   
     context = f"""
     PATIENT SNAPSHOT
     Patient ID: {patient_id}
@@ -268,8 +273,9 @@ def build_patient_chart_context(
 
     ABNORMAL FINDINGS
     Abnormal signal count: {abnormal_count}
-    Abnormal findings: {abnormal_findings}
-
+    
+    {abnormal_findings_text}
+    
     RISK TRAJECTORY
     Starting risk: {starting_risk}
     Minimum risk: {min_risk}
@@ -277,7 +283,7 @@ def build_patient_chart_context(
     Latest risk trend: {risk_trend}
 
     LIFECYCLE PATH
-    ", ".join(lifecycle_path)
+    {", ".join(lifecycle_path)}
     """
     return context.strip()
 
@@ -315,21 +321,59 @@ def build_bire_patient_explanation_prompt(patient_df):
 
     Patient facts:
     {chart_context}
+    
+    Write a structured clinician-facing explanation.
 
-    Write a concise explanation for a clinician.
+    Use professional clinical-style formatting.
 
-    Include:
-    - why this patient is being shown
-    - current BIRE tier and risk score
-    - risk trend
-    - abnormal vital signs with values
-    - timeline progression
-    - post-event concern
-    - safety note
+    Formatting requirements:
+    - Use section headers
+    - Use bullet points
+    - Keep sections concise
+    - Use plain text only
+    - Do not use LaTeX
+    - Do not use markdown math
+    - Do not use HTML
+    - Preserve exact numeric values
+    - Preserve exact lifecycle order
+    - Do not invent findings
+    - Do not invent diagnoses
+    - Do not recommend treatment
 
-    Begin the completed explanation now.
+    Required structure:
+
+    BIRE Clinical Intelligence Summary
+
+    Current State
+    - Final BIRE tier
+    - Risk score
+    - Risk trend
+    - Timing category
+    - Current escalation concern
+
+    Observed Abnormal Findings
+    - List abnormal vitals with values
+    - Briefly explain instability patterns
+
+    Timeline Progression
+    - Explain lifecycle progression
+    - Explain event timing
+    - Explain meaningful lead time
+
+    Post-Event Interpretation
+    - Explain MONITOR / RE-ESCALATE / CRITICAL significance if present
+    - Explain continued instability if present
+
+    Clinical Interpretation
+    - Summarize why this patient is concerning
+    - Focus on physiological instability and trajectory behavior
+
+    Safety Note
+    - State that BIRE is a research prototype clinical intelligence system
+    - State that this is not a diagnosis or treatment recommendation
+
+    Begin the completed clinician-facing explanation now.
     """
-
     return prompt.strip()
 
 
