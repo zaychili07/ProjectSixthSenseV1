@@ -236,8 +236,7 @@ spo2 = _round_value(vitals["spo2"], 1)
 temp = _round_value(vitals["temperature"], 1)
 sbp = _round_value(vitals["sbp"], 1)
 dbp = _round_value(vitals["dbp"], 1)
-    
-    
+
     context = f"""
 PATIENT SNAPSHOT
 Patient ID: {patient_id}
