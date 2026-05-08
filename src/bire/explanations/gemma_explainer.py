@@ -487,6 +487,12 @@ def clean_gemma_clinical_output(text):
     "\\_": "_",
     "<turn|>": "",
     "<eos>": "",
+    "\\rightarrow": "→",
+    "\\to": "→",
+    "\\text{": "",
+    "\\textit{": "",
+    "}": "",
+
 
     
     # Clinical wording cleanup
