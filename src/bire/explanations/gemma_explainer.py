@@ -227,10 +227,17 @@ def build_patient_chart_context(
 
     lifecycle_path = _compress_path(lifecycle_values)
 
-    # --------------------------------------------------------
-    # Final Context
-    # --------------------------------------------------------
 
+# Rounded Vital Signs
+
+hr = _round_value(vitals["heart_rate"], 1)
+rr = _round_value(vitals["resp_rate"], 1)
+spo2 = _round_value(vitals["spo2"], 1)
+temp = _round_value(vitals["temperature"], 1)
+sbp = _round_value(vitals["sbp"], 1)
+dbp = _round_value(vitals["dbp"], 1)
+    
+    
     context = f"""
 PATIENT SNAPSHOT
 Patient ID: {patient_id}
@@ -252,12 +259,12 @@ Critical reason: {critical_reason}
 BIRE decision reason: {bire_decision_reason}
 
 LATEST VITALS
-Heart rate: {_round_value(vitals["heart_rate"], 1)}
-Respiratory rate: {_round_value(vitals["resp_rate"], 1)}
-SpO2: {_round_value(vitals["spo2"], 1)}
-Temperature: {_round_value(vitals["temperature"], 1)}
-SBP: {_round_value(vitals["sbp"], 1)}
-DBP: {_round_value(vitals["dbp"], 1)}
+Heart rate: {hr}
+Respiratory rate: {rr}
+SpO2: {spo2}
+Temperature: {temp}
+SBP: {sbp}
+DBP: {dbp}
 
 ABNORMAL FINDINGS
 Abnormal signal count: {abnormal_count}
