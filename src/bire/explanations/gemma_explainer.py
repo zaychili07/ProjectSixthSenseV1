@@ -308,6 +308,8 @@ def build_bire_patient_explanation_prompt(patient_df):
     Do not say "monitor closely."
     Instead say "may warrant prompt clinical review."
     Do not invent or adjust numeric values. Use only the values provided in Patient facts.
+    
+    When describing the lifecycle path, preserve the exact order shown in the patient facts. Do not reorder, rename, or invent lifecycle states.
 
     Use actual numbers and findings.
 
@@ -502,6 +504,12 @@ def clean_gemma_clinical_output(text):
        
      "Prompt clinical review may warrant.": 
         "This situation may warrant prompt clinical review.",
+       
+     "clinical intelligent system": 
+        "clinical intelligence system",
+
+     "pre-signal": 
+        "pre-event signal",
 
     "instablity": "instability",
 }
