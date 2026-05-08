@@ -230,55 +230,54 @@ def build_patient_chart_context(
 
 # Rounded Vital Signs
 
-hr = _round_value(vitals["heart_rate"], 1)
-rr = _round_value(vitals["resp_rate"], 1)
-spo2 = _round_value(vitals["spo2"], 1)
-temp = _round_value(vitals["temperature"], 1)
-sbp = _round_value(vitals["sbp"], 1)
-dbp = _round_value(vitals["dbp"], 1)
+    hr = _round_value(vitals["heart_rate"], 1)
+    rr = _round_value(vitals["resp_rate"], 1)
+    spo2 = _round_value(vitals["spo2"], 1)
+    temp = _round_value(vitals["temperature"], 1)
+    sbp = _round_value(vitals["sbp"], 1)
+    dbp = _round_value(vitals["dbp"], 1)
 
-context = f"""
-PATIENT SNAPSHOT
-Patient ID: {patient_id}
-Timeline start: {timeline_start}
-Timeline end: {timeline_end}
-Events observed: {event_count}
-Event time: {event_time}
-First meaningful pre-event signal time: {first_meaningful_signal_time}
-Meaningful lead time minutes: {meaningful_lead_time_minutes}
+    context = f"""
+    PATIENT SNAPSHOT
+    Patient ID: {patient_id}
+    Timeline start: {timeline_start}
+    Timeline end: {timeline_end}
+    Events observed: {event_count}
+    Event time: {event_time}
+    First meaningful pre-event signal time: {first_meaningful_signal_time}
+    Meaningful lead time minutes: {meaningful_lead_time_minutes}
+    
+    CURRENT BIRE STATE
+    Final tier: {final_tier}
+    Risk score: {risk_score}
+    Risk trend: {risk_trend}
+    Timing category: {timing_category}
+    Monitor state: {monitor_state}
+    Re-escalation reason: {re_escalation_reason}
+    Critical reason: {critical_reason}
+    BIRE decision reason: {bire_decision_reason}
 
-CURRENT BIRE STATE
-Final tier: {final_tier}
-Risk score: {risk_score}
-Risk trend: {risk_trend}
-Timing category: {timing_category}
-Monitor state: {monitor_state}
-Re-escalation reason: {re_escalation_reason}
-Critical reason: {critical_reason}
-BIRE decision reason: {bire_decision_reason}
+    LATEST VITALS
+    Heart rate: {hr}
+    Respiratory rate: {rr}
+    SpO2: {spo2}
+    Temperature: {temp}
+    SBP: {sbp}
+    DBP: {dbp}
 
-LATEST VITALS
-Heart rate: {hr}
-Respiratory rate: {rr}
-SpO2: {spo2}
-Temperature: {temp}
-SBP: {sbp}
-DBP: {dbp}
+    ABNORMAL FINDINGS
+    Abnormal signal count: {abnormal_count}
+    Abnormal findings: {abnormal_findings}
 
-ABNORMAL FINDINGS
-Abnormal signal count: {abnormal_count}
-Abnormal findings: {abnormal_findings}
+    RISK TRAJECTORY
+    Starting risk: {starting_risk}
+    Minimum risk: {min_risk}
+    Maximum risk: {max_risk}
+    Latest risk trend: {risk_trend}
 
-RISK TRAJECTORY
-Starting risk: {starting_risk}
-Minimum risk: {min_risk}
-Maximum risk: {max_risk}
-Latest risk trend: {risk_trend}
-
-LIFECYCLE PATH
-{" → ".join(lifecycle_path)}
-"""
-
+    LIFECYCLE PATH
+    {" → ".join(lifecycle_path)}
+    """
     return context.strip()
 
 
