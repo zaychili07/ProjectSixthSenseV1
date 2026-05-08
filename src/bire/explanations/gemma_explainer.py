@@ -277,7 +277,7 @@ def build_patient_chart_context(
     Latest risk trend: {risk_trend}
 
     LIFECYCLE PATH
-    {" → ".join(lifecycle_path)}
+    ", ".join(lifecycle_path)
     """
     return context.strip()
 
