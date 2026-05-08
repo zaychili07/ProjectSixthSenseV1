@@ -526,7 +526,7 @@ def clean_gemma_clinical_output(text):
     # Normalize extra whitespace
     while "\n\n\n" in text:
         text = text.replace("\n\n\n", "\n\n")
-        # Convert European decimal commas to periods
-        text = re.sub(r'(\d),(\d)', r'\1.\2', text)
+    # Convert European decimal commas to periods
+    text = re.sub(r'(\d),(\d)', r'\1.\2', text)
     
     return text.strip()
