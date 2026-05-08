@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 #=======================================================
 # Gemma exlaination model. used for producing clean and 
@@ -498,6 +499,9 @@ def clean_gemma_clinical_output(text):
 
     "monitor closely for further changes.":
         "review trend and vital-sign changes in clinical context.",
+       
+     "Prompt clinical review may warrant.": 
+        "This situation may warrant prompt clinical review.",
 
     "instablity": "instability",
 }
@@ -522,5 +526,7 @@ def clean_gemma_clinical_output(text):
     # Normalize extra whitespace
     while "\n\n\n" in text:
         text = text.replace("\n\n\n", "\n\n")
-
+        # Convert European decimal commas to periods
+        text = re.sub(r'(\d),(\d)', r'\1.\2', text)
+    
     return text.strip()
