@@ -228,7 +228,7 @@ def build_patient_chart_context(
     lifecycle_path = _compress_path(lifecycle_values)
 
 
-# Rounded Vital Signs
+    # Rounded Vital Signs
 
     hr = _round_value(vitals["heart_rate"], 1)
     rr = _round_value(vitals["resp_rate"], 1)
@@ -293,39 +293,39 @@ def build_bire_patient_explanation_prompt(patient_df):
     chart_context = build_patient_chart_context(patient_df)
 
     prompt = f"""
-You are writing a clinician-facing explanation for BIRE.
+    You are writing a clinician-facing explanation for BIRE.
 
-BIRE is a research prototype clinical intelligence system.
-BIRE already assigned the patient state.
+    BIRE is a research prototype clinical intelligence system.
+    BIRE already assigned the patient state.
 
-Explain what BIRE is observing using the patient facts below.
+    Explain what BIRE is observing using the patient facts below.
 
-Do not diagnose.
-Do not recommend treatment.
-Do not claim clinical validation.
-Do not say "requires immediate attention."
-Do not say "monitor closely."
-Instead say "may warrant prompt clinical review."
-Do not invent or adjust numeric values. Use only the values provided in Patient facts.
+    Do not diagnose.
+    Do not recommend treatment.
+    Do not claim clinical validation.
+    Do not say "requires immediate attention."
+    Do not say "monitor closely."
+    Instead say "may warrant prompt clinical review."
+    Do not invent or adjust numeric values. Use only the values provided in Patient facts.
 
-Use actual numbers and findings.
+    Use actual numbers and findings.
 
-Patient facts:
-{chart_context}
+    Patient facts:
+    {chart_context}
 
-Write a concise explanation for a clinician.
+    Write a concise explanation for a clinician.
 
-Include:
-- why this patient is being shown
-- current BIRE tier and risk score
-- risk trend
-- abnormal vital signs with values
-- timeline progression
-- post-event concern
-- safety note
+    Include:
+    - why this patient is being shown
+    - current BIRE tier and risk score
+    - risk trend
+    - abnormal vital signs with values
+    - timeline progression
+    - post-event concern
+    - safety note
 
-Begin the completed explanation now.
-"""
+    Begin the completed explanation now.
+    """
 
     return prompt.strip()
 
