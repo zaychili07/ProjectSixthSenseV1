@@ -1,12 +1,8 @@
 import pandas as pd
-
-
-# ============================================================
-# BIRE Gemma Explainer
-# Principle:
-# BIRE decides. Gemma explains.
-# ============================================================
-
+#=======================================================
+# Gemma exlaination model. used for producing clean and 
+# readable output from BIRE
+#=======================================================
 
 def _safe_get(row, key, default=None):
     try:
@@ -48,10 +44,7 @@ def _compress_path(values):
     return compressed
 
 
-# ============================================================
 # Vital Extraction
-# ============================================================
-
 def _get_latest_vitals(row):
 
     return {
@@ -91,11 +84,7 @@ def _detect_abnormal_findings(vitals):
 
     return findings
 
-
-# ============================================================
 # Patient Context Builder
-# ============================================================
-
 def build_patient_chart_context(
     patient_df,
     meaningful_risk_threshold=0.40,
