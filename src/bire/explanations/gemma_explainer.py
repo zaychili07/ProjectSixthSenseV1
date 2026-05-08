@@ -588,3 +588,88 @@ def clean_gemma_clinical_output(text):
     text = re.sub(r'(\d),(\d)', r'\1.\2', text)
     
     return text.strip()
+
+def build_bire_fixed_clinical_sections(patient_df):
+    """
+    Build exact clinical report sections directly from BIRE data.
+    Gemma does not rewrite these numbers.
+    """
+    context = build_bire_explanation_export(patient_df)
+
+    vitals = context["latest_vitals"]
+    findings = context["abnormal_findings"]
+    path = " → ".join(context["lifecycle_path"])
+
+    findings_text = "\n".join([f"- {x}" for x in findings])
+
+    report = f"""
+    BIRE Clinical Intelligence Summary
+
+    Current State
+    - Final BIRE tier: {context["final_tier"]}
+    - Risk score: {context["risk_score"]}
+    - Risk trend: {context["risk_trend"]}
+    - Timing category: {context["timing_category"]}
+    - Monitor state: {context["monitor_state"]}
+    - Re-escalation reason: {context["re_escalate_reason"]}
+    - Critical reason: {context["critical_reason"]}
+
+    Observed Abnormal Findings
+    {findings_text}
+
+    Latest Vitals
+    - Heart rate: {vitals["heart_rate"]}
+    - Respiratory rate: {vitals["resp_rate"]}
+    - SpO2: {vitals["spo2"]}
+    - Temperature: {vitals["temperature"]}
+    - SBP: {vitals["sbp"]}
+    - DBP: {vitals["dbp"]}
+
+    Timeline Progression
+    - Lifecycle path: {path}
+    """
+    return report.strip()
+
+def build_bire_interpretation_prompt(patient_df):
+    """
+    Ask Gemma to explain meaning only.
+    No numeric rewriting.
+    """
+    chart_context = build_patient_chart_context(patient_df)
+
+    prompt = f"""
+    You are writing the interpretation section for BIRE.
+
+    BIRE is a research prototype clinical intelligence system.
+    BIRE already assigned the patient state.
+
+    Use the patient facts below, but do not rewrite numeric values.
+    Do not list vitals.
+    Do not restate the Current State section.
+    Do not alter dates, risk scores, or vital values.
+
+    Write only these sections:
+
+    Post-Event Interpretation
+    - Explain what BIRE is observing after deterioration onset.
+
+    Clinical Interpretation
+    - Explain why the pattern is concerning using clinical-style language.
+    - Focus on physiological instability, risk acceleration, and multi-signal deterioration.
+
+    Safety Note
+    - State that BIRE is a research prototype and not a diagnosis or treatment recommendation.
+    
+    Patient facts:
+    {chart_context}
+    """
+    return prompt.strip()
+
+def build_final_bire_clinician_report(patient_df, interpretation_text):
+    fixed_sections = build_bire_fixed_clinical_sections(patient_df)
+
+    return f"""
+    {fixed_sections}
+
+    {interpretation_text}
+    """.strip()
