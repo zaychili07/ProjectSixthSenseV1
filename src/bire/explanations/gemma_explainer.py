@@ -309,6 +309,10 @@ Explain what BIRE is observing using the patient facts below.
 Do not diagnose.
 Do not recommend treatment.
 Do not claim clinical validation.
+Do not say "requires immediate attention."
+Do not say "monitor closely."
+Instead say "may warrant prompt clinical review."
+Do not invent or adjust numeric values. Use only the values provided in Patient facts.
 
 Use actual numbers and findings.
 
@@ -473,21 +477,37 @@ def clean_gemma_clinical_output(text):
     text = str(text)
 
     replacements = {
-        "<strong>": "",
-        "</strong>": "",
-        "<br>": "\n",
-        "<br/>": "\n",
-        "<br />": "\n",
-        "$\\text{SpO}_2$": "SpO2",
-        "$\\text{SPO}_2$": "SpO2",
-        "\\text{SpO}_2": "SpO2",
-        "\\text{SPO}_2": "SpO2",
-        "$": "",
-        "\\_": "_",
-        "<turn|>": "",
-        "<eos>": "",
-    }
+    "<strong>": "",
+    "</strong>": "",
+    "<br>": "\n",
+    "<br/>": "\n",
+    "<br />": "\n",
+    "$\\text{SpO}_2$": "SpO2",
+    "$\\text{SPO}_2$": "SpO2",
+    "\\text{SpO}_2": "SpO2",
+    "\\text{SPO}_2": "SpO2",
+    "$": "",
+    "\\_": "_",
+    "<turn|>": "",
+    "<eos>": "",
 
+    
+    # Clinical wording cleanup
+    "requires immediate attention": 
+        "may warrant prompt clinical review",
+        
+    "require immediate attention": 
+        "may warrant prompt clinical review",
+
+    "Monitor closely for further changes.":
+        "Review trend and vital-sign changes in clinical context.",
+
+    "monitor closely for further changes.":
+        "review trend and vital-sign changes in clinical context.",
+
+    "instablity": "instability",
+}
+    
     for old, new in replacements.items():
         text = text.replace(old, new)
 
