@@ -1,4 +1,5 @@
 import re
+import textwrap
 import pandas as pd
 #=======================================================
 # Gemma exlaination model. used for producing clean and 
@@ -572,6 +573,9 @@ def clean_gemma_clinical_output(text):
        
      "clinical intelligent system": 
         "clinical intelligence system",
+        
+    "necessitating immediate attention":
+        "indicating escalating physiological concern",
 
      "pre-signal": 
         "pre-event signal",
@@ -714,7 +718,9 @@ def build_bire_fixed_clinical_sections(patient_df):
         - Meaningful lead time: {lead_time_minutes} minutes
         - Lifecycle path: {lifecycle_path}
         """
-        return report.strip()
+        
+        return textwrap.dedent(report).strip()
+       
 
 def build_bire_interpretation_prompt(patient_df):
     """
