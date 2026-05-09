@@ -1,27 +1,174 @@
 import pandas as pd
 
+
+PSR_WEIGHTS = {
+    "risk_score_weight": 100,
+    "abnormal_burden_weight": 10,
+    "critical_weight": 50,
+    "re_escalation_weight": 25,
+}
+
+
 def build_latest_patient_view(df):
     """
     Get the latest available row for each patient.
     """
-
-    latest_patient_view = (
+    return (
         df.sort_values("timestamp")
         .groupby("patient_id")
         .tail(1)
         .copy()
     )
 
-    return latest_patient_view
+
+def calculate_psr_scores(df, weights=None):
+    """
+    Calculate PSR attention score and component breakdown.
+    """
+    weights = weights or PSR_WEIGHTS
+
+    out = df.copy()
+
+    out["risk_score_component"] = (
+        out["pred_proba"].fillna(0)
+        * weights["risk_score_weight"]
+    )
+
+    out["abnormal_burden_component"] = (
+        out["abnormal_count"].fillna(0)
+        * weights["abnormal_burden_weight"]
+    )
+
+    out["critical_component"] = (
+        out["critical_flag"].fillna(False).astype(int)
+        * weights["critical_weight"]
+    )
+
+    out["re_escalation_component"] = (
+        out["re_escalate_flag"].fillna(False).astype(int)
+        * weights["re_escalation_weight"]
+    )
+
+    out["psr_attention_score"] = (
+        out["risk_score_component"]
+        + out["abnormal_burden_component"]
+        + out["critical_component"]
+        + out["re_escalation_component"]
+    )
+
+    return out
+
+
+def assign_psr_attention_band(score):
+    """
+    Assign operational attention band from PSR score.
+    """
+    if score >= 200:
+        return "CRITICAL ATTENTION"
+    if score >= 120:
+        return "HIGH ATTENTION"
+    if score >= 60:
+        return "MODERATE ATTENTION"
+    return "LOW ATTENTION"
+
+
+def determine_current_status(row):
+    """
+    Determine current patient trajectory status.
+    """
+    if row.get("critical_flag") is True:
+        return "WORSENING"
+
+    if row.get("re_escalate_flag") is True:
+        return "UNSTABLE"
+
+    return "STABLE"
+
+
+def determine_queue_state(row):
+    """
+    Determine operational queue state from PSR status flags.
+    """
+    if (
+        row.get("critical_flag") is True
+        and row.get("re_escalate_flag") is True
+    ):
+        return "RE_ESCALATED"
+
+    if row.get("critical_flag") is True:
+        return "ESCALATED"
+
+    if row.get("current_status") == "WORSENING":
+        return "ACTIVE_REVIEW"
+
+    if row.get("current_status") == "UNSTABLE":
+        return "MONITORING"
+
+    if row.get("current_status") == "STABLE":
+        return "STABLE_OBSERVATION"
+
+    return "UNREVIEWED"
+
+
+def build_context_tags(row):
+    """
+    Build compact backend context tags for a PSR row.
+    """
+    tags = []
+
+    if row.get("re_escalate_flag") is True:
+        tags.append("RE_ESCALATION")
+
+    if row.get("critical_flag") is True:
+        tags.append("CRITICAL")
+
+    if row.get("bire_state") == "Post-event monitoring":
+        tags.append("POST_EVENT")
+
+    if row.get("monitor_state") == "DECLINING_MONITOR":
+        tags.append("DECLINING_MONITOR")
+
+    return ", ".join(tags)
+
+
+def build_psr_operational_queue(df):
+    """
+    Build ranked PSR operational queue.
+    """
+    out = calculate_psr_scores(df)
+
+    out["psr_attention_band"] = (
+        out["psr_attention_score"]
+        .apply(assign_psr_attention_band)
+    )
+
+    out["current_status"] = (
+        out.apply(determine_current_status, axis=1)
+    )
+
+    out["queue_state"] = (
+        out.apply(determine_queue_state, axis=1)
+    )
+
+    out["context_tags"] = (
+        out.apply(build_context_tags, axis=1)
+    )
+
+    out = (
+        out.sort_values("psr_attention_score", ascending=False)
+        .reset_index(drop=True)
+    )
+
+    out["operational_rank"] = out.index + 1
+
+    return out
 
 
 def build_cohort_intelligence_view(df):
     """
     Build the first cohort-level PSR intelligence view.
     """
-
     latest_patient_view = build_latest_patient_view(df)
-
     latest_patient_view = calculate_psr_scores(latest_patient_view)
 
     latest_patient_view["psr_attention_band"] = (
@@ -52,19 +199,17 @@ def build_cohort_intelligence_view(df):
         if col in latest_patient_view.columns
     ]
 
-    cohort_view = (
+    return (
         latest_patient_view[available_cols]
         .sort_values("psr_attention_score", ascending=False)
         .reset_index(drop=True)
     )
 
-    return cohort_view
 
 def build_psr_score_breakdown(df):
     """
     Build an interpretable PSR score component breakdown.
     """
-
     psr_df = calculate_psr_scores(df)
 
     breakdown_cols = [
@@ -88,246 +233,38 @@ def build_psr_score_breakdown(df):
         if col in psr_df.columns
     ]
 
-    breakdown_view = (
+    return (
         psr_df[available_cols]
         .sort_values("psr_attention_score", ascending=False)
         .reset_index(drop=True)
     )
 
-    return breakdown_view
-
-
-# 39.13 — PSR Attention Bands
-def assign_psr_attention_band(score):
-
-    if score >= 200:
-        return "CRITICAL ATTENTION"
-
-    elif score >= 120:
-        return "HIGH ATTENTION"
-
-    elif score >= 60:
-        return "MODERATE ATTENTION"
-
-    else:
-        return "LOW ATTENTION"
-
-
-# Apply Attention Bands
-psr_operational_queue["psr_attention_band"] = (
-    psr_operational_queue["psr_attention_score"]
-    .apply(assign_psr_attention_band)
-)
-
-
-# Display Updated Queue
-band_cols = [
-    "patient_id",
-    "timestamp",
-    "psr_attention_score",
-    "psr_attention_band",
-    "pred_proba",
-    "bire_final_tier",
-    "bire_state",
-    "monitor_state",
-    "re_escalate_flag",
-    "critical_flag",
-]
-
-available_band_cols = [
-    col for col in band_cols
-    if col in psr_operational_queue.columns
-]
-
-
 
 def get_critical_attention_cohort(df):
-    return df[
-        df["psr_attention_band"] == "CRITICAL ATTENTION"
-    ]
+    """
+    Filter CRITICAL ATTENTION patients.
+    """
+    return df[df["psr_attention_band"] == "CRITICAL ATTENTION"]
 
 
 def get_re_escalation_cohort(df):
-    return df[
-        df["re_escalate_flag"] == True
-    ]
+    """
+    Filter patients with active re-escalation behavior.
+    """
+    return df[df["re_escalate_flag"] == True]
 
 
 def get_post_event_monitoring_cohort(df):
-    return df[
-        df["bire_state"] == "Post-event monitoring"
-    ]
-
-def build_context_tags(row):
-
-    tags = []
-
-    if row.get("re_escalate_flag") == True:
-        tags.append("RE_ESCALATION")
-
-    if row.get("critical_flag") == True:
-        tags.append("CRITICAL")
-
-    if row.get("bire_state") == "Post-event monitoring":
-        tags.append("POST_EVENT")
-
-    if row.get("monitor_state") == "DECLINING_MONITOR":
-        tags.append("DECLINING_MONITOR")
-
-    return ", ".join(tags)
-
-
-
-# Build Context Tags
-psr_operational_queue["context_tags"] = (
-    psr_operational_queue
-    .apply(build_context_tags, axis=1)
-)
-
-
-# Example Dynamic Current Status
-def determine_current_status(row):
-
-    if row.get("critical_flag") == True:
-        return "WORSENING"
-
-    if row.get("re_escalate_flag") == True:
-        return "UNSTABLE"
-
-    return "STABLE"
-
-
-psr_operational_queue["current_status"] = (
-    psr_operational_queue
-    .apply(determine_current_status, axis=1)
-)
-
-
-# Add Operational Rank
-psr_operational_queue = (
-    psr_operational_queue
-    .sort_values("psr_attention_score", ascending=False)
-    .reset_index(drop=True)
-)
-
-psr_operational_queue["operational_rank"] = (
-    psr_operational_queue.index + 1
-)
-
-def build_monitoring_summary(row):
-    
-    if (
-        row.get("critical_flag") == True
-        and row.get("re_escalate_flag") == True
-        and row.get("bire_state") == "Post-event monitoring"
-    ):
-        return "Post-event decline with re-escalation concern"
-    
-    if row.get("critical_flag") == True:
-        return "Critical instability requiring close review"
-    
-    if row.get("re_escalate_flag") == True:
-        return "Re-escalation concern detected"
-    
-    if row.get("bire_state") == "Post-event monitoring":
-        return "Post-event monitoring active"
-    
-    if row.get("psr_attention_band") == "HIGH ATTENTION":
-        return "High-priority monitoring case"
-    
-    if row.get("psr_attention_band") == "MODERATE ATTENTION":
-        return "Moderate concern; continue monitoring"
-    
-    return "Low current operational concern"
-
-
-def simplify_attention_band(band):
-    
-    band_map = {
-        "CRITICAL ATTENTION": "Critical",
-        "HIGH ATTENTION": "High",
-        "MODERATE ATTENTION": "Moderate",
-        "LOW ATTENTION": "Low",
-    }
-    
-    return band_map.get(band, band)
-
-
-def simplify_status(status):
-    
-    status_map = {
-        "WORSENING": "Worsening",
-        "UNSTABLE": "Unstable",
-        "STABLE": "Stable",
-        "IMPROVING": "Improving",
-    }
-    
-    return status_map.get(status, status)
-
-
-# ------------------------------------------
-# Build Human-Readable Queue
-# ------------------------------------------
-
-human_queue = psr_operational_queue.copy()
-
-human_queue["Attention"] = (
-    human_queue["psr_attention_band"]
-    .apply(simplify_attention_band)
-)
-
-human_queue["Status"] = (
-    human_queue["current_status"]
-    .apply(simplify_status)
-)
-
-human_queue["Monitoring Summary"] = (
-    human_queue
-    .apply(build_monitoring_summary, axis=1)
-)
-
-human_queue["PSR Score"] = (
-    human_queue["psr_attention_score"]
-    .round(1)
-)
-
-human_queue_view = human_queue[[
-    "operational_rank",
-    "patient_id",
-    "Attention",
-    "Status",
-    "Monitoring Summary",
-    "PSR Score",
-]].rename(columns={
-    "operational_rank": "Rank",
-    "patient_id": "Patient",
-})
-
-display(human_queue_view)
-
-
-# Final Primary Queue
-primary_queue_cols = [
-    "operational_rank",
-    "patient_id",
-    "psr_attention_band",
-    "current_status",
-    "context_tags",
-    "psr_attention_score",
-]
-
-display(
-    psr_operational_queue[primary_queue_cols]
-)
-
-import pandas as pd
+    """
+    Filter patients in post-event monitoring.
+    """
+    return df[df["bire_state"] == "Post-event monitoring"]
 
 
 def classify_psr_drift(delta):
     """
     Classify PSR score movement over time.
     """
-
     if pd.isna(delta):
         return "INITIAL"
 
@@ -350,7 +287,6 @@ def add_psr_drift_tracking(df):
     """
     Add PSR temporal drift and persistence tracking.
     """
-
     out = (
         df.sort_values(["patient_id", "timestamp"])
         .copy()
@@ -373,37 +309,11 @@ def add_psr_drift_tracking(df):
 
     return out
 
-def determine_queue_state(row):
-    """
-    Determine operational queue state from PSR status flags.
-    """
-
-    if (
-        row.get("critical_flag") == True
-        and row.get("re_escalate_flag") == True
-    ):
-        return "RE_ESCALATED"
-
-    if row.get("critical_flag") == True:
-        return "ESCALATED"
-
-    if row.get("current_status") == "WORSENING":
-        return "ACTIVE_REVIEW"
-
-    if row.get("current_status") == "UNSTABLE":
-        return "MONITORING"
-
-    if row.get("current_status") == "STABLE":
-        return "STABLE_OBSERVATION"
-
-    return "UNREVIEWED"
-
 
 def add_queue_states(df):
     """
     Add operational queue states to the PSR queue.
     """
-
     out = df.copy()
 
     out["queue_state"] = (
@@ -411,6 +321,72 @@ def add_queue_states(df):
     )
 
     return out
+
+
+def simplify_attention_band(band):
+    """
+    Convert PSR attention band to human-readable display text.
+    """
+    band_map = {
+        "CRITICAL ATTENTION": "Critical",
+        "HIGH ATTENTION": "High",
+        "MODERATE ATTENTION": "Moderate",
+        "LOW ATTENTION": "Low",
+    }
+
+    return band_map.get(band, band)
+
+
+def simplify_status(status):
+    """
+    Convert backend status to human-readable display text.
+    """
+    status_map = {
+        "WORSENING": "Worsening",
+        "UNSTABLE": "Unstable",
+        "STABLE": "Stable",
+        "IMPROVING": "Improving",
+    }
+
+    return status_map.get(status, status)
+
+
+def build_human_readable_psr_queue(df):
+    """
+    Build clean human-readable PSR queue view.
+    """
+    out = df.copy()
+
+    out["Attention"] = (
+        out["psr_attention_band"]
+        .apply(simplify_attention_band)
+    )
+
+    out["Status"] = (
+        out["current_status"]
+        .apply(simplify_status)
+    )
+
+    out["PSR Score"] = (
+        out["psr_attention_score"]
+        .round(1)
+    )
+
+    view = out[[
+        "operational_rank",
+        "patient_id",
+        "Attention",
+        "Status",
+        "queue_state",
+        "PSR Score",
+    ]].rename(columns={
+        "operational_rank": "Rank",
+        "patient_id": "Patient",
+        "queue_state": "Queue State",
+    })
+
+    return view
+
 
 def add_patient_summary_fields(
     df,
@@ -420,7 +396,6 @@ def add_patient_summary_fields(
     """
     Add patient summary and verification fields to the PSR queue.
     """
-
     out = df.copy()
 
     out["patient_summary"] = default_summary
@@ -438,7 +413,6 @@ def update_patient_summary(
     """
     Update verified patient summary context for a specific patient.
     """
-
     out = df.copy()
 
     patient_mask = out["patient_id"] == patient_id
@@ -447,3 +421,40 @@ def update_patient_summary(
     out.loc[patient_mask, "verified_by"] = verified_by
 
     return out
+
+
+def build_summary_queue_view(df):
+    """
+    Build final PSR summary queue display view.
+    """
+    summary_cols = [
+        "operational_rank",
+        "patient_id",
+        "psr_attention_band",
+        "current_status",
+        "queue_state",
+        "psr_attention_score",
+        "patient_summary",
+        "verified_by",
+    ]
+
+    available_cols = [
+        col for col in summary_cols
+        if col in df.columns
+    ]
+
+    view = df[available_cols].rename(columns={
+        "operational_rank": "Rank",
+        "patient_id": "Patient",
+        "psr_attention_band": "Attention",
+        "current_status": "Status",
+        "queue_state": "Queue State",
+        "psr_attention_score": "PSR Score",
+        "patient_summary": "Patient Summary",
+        "verified_by": "Verified By",
+    })
+
+    if "PSR Score" in view.columns:
+        view["PSR Score"] = view["PSR Score"].round(1)
+
+    return view
