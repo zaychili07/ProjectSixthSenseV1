@@ -667,11 +667,11 @@ def build_bire_fixed_clinical_sections(patient_df):
             lead_time_minutes = int(
                 (event_time - first_signal_time).total_seconds() / 60
             )
- 
-         report = f"""
-         BIRE Clinical Intelligence Summary
-
-       Current State
+            
+        report = f"""
+        BIRE Clinical Intelligence Summary
+        
+        Current State
         - Patient ID: {patient_id}
         - Final BIRE tier: {final_tier}
         - Risk score: {risk_score}
