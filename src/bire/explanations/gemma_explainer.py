@@ -594,41 +594,112 @@ def build_bire_fixed_clinical_sections(patient_df):
     Build exact clinical report sections directly from BIRE data.
     Gemma does not rewrite these numbers.
     """
-    context = build_bire_explanation_export(patient_df)
+    p = patient_df.copy()
 
-    vitals = context["latest_vitals"]
-    findings = context["abnormal_findings"]
-    path = " → ".join(context["lifecycle_path"])
+    if p.empty:
+        raise ValueError("patient_df is empty.")
 
-    findings_text = "\n".join([f"- {x}" for x in findings])
+    if "timestamp" in p.columns:
+        p["timestamp"] = pd.to_datetime(p["timestamp"])
+        p = p.sort_values("timestamp")
 
-    report = f"""
-    BIRE Clinical Intelligence Summary
+    latest = p.iloc[-1]
 
-    Current State
-    - Final BIRE tier: {context["final_tier"]}
-    - Risk score: {context["risk_score"]}
-    - Risk trend: {context["risk_trend"]}
-    - Timing category: {context["timing_category"]}
-    - Monitor state: {context["monitor_state"]}
-    - Re-escalation reason: {context["re_escalate_reason"]}
-    - Critical reason: {context["critical_reason"]}
+    patient_id = _safe_get(latest, "patient_id", "UNKNOWN")
+    final_tier = _safe_get(latest, "bire_final_tier", "UNKNOWN")
+    risk_score = _round_value(_safe_get(latest, "pred_proba"), 3)
+    risk_trend = _round_value(_safe_get(latest, "risk_trend"), 3)
 
-    Observed Abnormal Findings
-    {findings_text}
+    timing_category = _safe_get(
+        latest,
+        "bire_timing",
+        _safe_get(latest, "timing_category", "unknown"),
+    )
 
-    Latest Vitals
-    - Heart rate: {vitals["heart_rate"]}
-    - Respiratory rate: {vitals["resp_rate"]}
-    - SpO2: {vitals["spo2"]}
-    - Temperature: {vitals["temperature"]}
-    - SBP: {vitals["sbp"]}
-    - DBP: {vitals["dbp"]}
+    monitor_state = _safe_get(latest, "monitor_state")
+    re_reason = _safe_get(latest, "re_escalate_reason")
+    critical_reason = _safe_get(latest, "critical_reason")
 
-    Timeline Progression
-    - Lifecycle path: {path}
-    """
-    return report.strip()
+    vitals = _get_latest_vitals(latest)
+
+    hr = _round_value(vitals["heart_rate"], 1)
+    rr = _round_value(vitals["resp_rate"], 1)
+    spo2 = _round_value(vitals["spo2"], 1)
+    temp = _round_value(vitals["temperature"], 1)
+    sbp = _round_value(vitals["sbp"], 1)
+    dbp = _round_value(vitals["dbp"], 1)
+
+    abnormal_findings = _detect_abnormal_findings(vitals)
+    findings_text = "\n".join([f"- {x}" for x in abnormal_findings])
+
+    if not findings_text:
+        findings_text = "- No abnormal findings detected by current BIRE thresholds."
+
+    lifecycle_values = (
+        p["bire_final_tier"].dropna().astype(str).tolist()
+        if "bire_final_tier" in p.columns
+        else []
+    )
+
+    lifecycle_path = " → ".join(_compress_path(lifecycle_values))
+
+    event_count = int(p["event_now"].sum()) if "event_now" in p.columns else 0
+
+    event_time = None
+    first_signal_time = None
+    lead_time_minutes = None
+
+    if (
+        "event_now" in p.columns
+        and "timestamp" in p.columns
+        and "pred_proba" in p.columns
+        and p["event_now"].eq(1).any()
+    ):
+        event_time = p.loc[p["event_now"] == 1, "timestamp"].min()
+
+        pre_event_signal = p[
+            (p["timestamp"] < event_time)
+            & (p["pred_proba"] >= 0.40)
+        ]
+
+        if not pre_event_signal.empty:
+            first_signal_time = pre_event_signal["timestamp"].min()
+            lead_time_minutes = int(
+                (event_time - first_signal_time).total_seconds() / 60
+            )
+ 
+         report = f"""
+         BIRE Clinical Intelligence Summary
+
+       Current State
+        - Patient ID: {patient_id}
+        - Final BIRE tier: {final_tier}
+        - Risk score: {risk_score}
+        - Risk trend: {risk_trend}
+        - Timing category: {timing_category}
+        - Monitor state: {monitor_state}
+        - Re-escalation reason: {re_reason}
+        - Critical reason: {critical_reason}
+
+        Observed Abnormal Findings
+        {findings_text}
+
+        Latest Vitals
+        - Heart rate: {hr}
+        - Respiratory rate: {rr}
+        - SpO2: {spo2}
+        - Temperature: {temp}
+        - SBP: {sbp}
+        - DBP: {dbp}
+
+        Timeline Progression
+        - Events observed: {event_count}
+        - Event time: {event_time}
+        - First meaningful pre-event signal time: {first_signal_time}
+        - Meaningful lead time: {lead_time_minutes} minutes
+        - Lifecycle path: {lifecycle_path}
+        """
+        return report.strip()
 
 def build_bire_interpretation_prompt(patient_df):
     """
