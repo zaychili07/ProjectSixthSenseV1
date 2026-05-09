@@ -68,6 +68,7 @@ def plot_patient_lifecycle_timeline(
 
     return patient_df
 
+
 def plot_patient_risk_trajectory(
     patient_df,
     patient_id=None,
@@ -141,6 +142,9 @@ def plot_patient_risk_trajectory(
     plt.tight_layout()
     plt.show()
 
+    return plot_df
+
+
 def plot_patient_vital_trends(
     patient_df,
     patient_id=None,
@@ -172,7 +176,6 @@ def plot_patient_vital_trends(
     plt.figure(figsize=(18, 10))
 
     for vital in available_vitals:
-
         plt.plot(
             plot_df[timestamp_col],
             plot_df[vital],
@@ -182,7 +185,6 @@ def plot_patient_vital_trends(
         )
 
     plt.title(f"Patient Vital Trends — {patient_id}")
-
     plt.xlabel("Timestamp")
     plt.ylabel("Vital Measurement")
 
@@ -190,6 +192,9 @@ def plot_patient_vital_trends(
     plt.legend()
     plt.tight_layout()
     plt.show()
+
+    return plot_df
+
 
 def build_episode_timing_view(patient_df):
     """
@@ -289,6 +294,9 @@ def plot_patient_lead_time_timeline(
     plt.tight_layout()
     plt.show()
 
+    return plot_df
+
+
 def build_decision_reasoning_view(patient_df):
     """
     Build a patient-level decision reasoning table for dashboard review.
@@ -326,6 +334,7 @@ def build_decision_reasoning_view(patient_df):
 
     return reasoning_view
 
+
 def build_clinician_summary_snapshot(patient_df):
     """
     Build a concise latest-state clinician summary snapshot for one patient.
@@ -340,26 +349,19 @@ def build_clinician_summary_snapshot(patient_df):
     summary_items = {
         "Patient ID": latest_row.get("patient_id"),
         "Timestamp": latest_row.get("timestamp"),
-
         "Predicted Risk": round(float(latest_row.get("pred_proba", 0)), 4),
         "Risk Band": latest_row.get("risk_band"),
-
         "Final Tier": latest_row.get("bire_final_tier"),
         "BIRE State": latest_row.get("bire_state"),
         "BIRE Timing": latest_row.get("bire_timing"),
-
         "Timing Category": latest_row.get("timing_category"),
         "Episode Intelligence Type": latest_row.get("episode_intelligence_type"),
-
         "Lead Time (min)": latest_row.get("lead_time_min"),
         "Abnormal Count": latest_row.get("abnormal_count"),
-
         "Decision Reason": latest_row.get("bire_decision_reason"),
-
         "Watch Override Reason": latest_row.get("watch_override_reason"),
         "IBPIP Override Reason": latest_row.get("ibpip_override_reason"),
         "GSS-VE Reason": latest_row.get("gss_ve_reason"),
-
         "Monitor State": latest_row.get("monitor_state"),
         "Re-Escalate Reason": latest_row.get("re_escalate_reason"),
         "Critical Reason": latest_row.get("critical_reason"),
