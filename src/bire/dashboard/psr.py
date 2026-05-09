@@ -428,15 +428,15 @@ def build_summary_queue_view(df):
     Build final PSR summary queue display view.
     """
     summary_cols = [
-        "operational_rank",
-        "patient_id",
-        "psr_attention_band",
-        "current_status",
-        "queue_state",
-        "psr_attention_score",
-        "patient_summary",
-        "verified_by",
-    ]
+    "operational_rank",
+    "patient_id",
+    "psr_attention_band",
+    "current_status",
+    "queue_state",
+    "psr_attention_score",
+    "patient_summary",
+    "verified_by",
+]
 
     available_cols = [
         col for col in summary_cols
