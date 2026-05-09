@@ -17,7 +17,16 @@ def _safe_get(row, key, default=None):
     except Exception:
         return default
 
+def _celsius_to_fahrenheit(temp_c):
+    if temp_c is None:
+        return None
 
+    try:
+        return round((float(temp_c) * 9 / 5) + 32, 1)
+
+    except Exception:
+        return temp_c
+        
 def _round_value(value, digits=3):
     if value is None:
         return None
@@ -59,7 +68,10 @@ def _get_latest_vitals(row):
 
 
 def _detect_abnormal_findings(vitals):
-
+    """
+    Detect abnormal findings using BIRE research thresholds.
+    Returns clinician-readable labels with units.
+    """
     findings = []
 
     hr = vitals.get("heart_rate")
@@ -69,19 +81,22 @@ def _detect_abnormal_findings(vitals):
     sbp = vitals.get("sbp")
 
     if hr is not None and hr > 120:
-        findings.append(f"elevated heart rate ({hr:.1f})")
+        findings.append(f"Tachycardia — elevated heart rate: {hr:.1f} bpm")
 
     if rr is not None and rr > 24:
-        findings.append(f"elevated respiratory rate ({rr:.1f})")
+        findings.append(f"Tachypnea — elevated respiratory rate: {rr:.1f} breaths/min")
 
     if spo2 is not None and spo2 < 92:
-        findings.append(f"low oxygen saturation / SpO2 ({spo2:.1f})")
+        findings.append(f"Hypoxemia — low oxygen saturation: SpO2 {spo2:.1f}%")
 
     if sbp is not None and sbp < 100:
-        findings.append(f"low systolic blood pressure / SBP ({sbp:.1f})")
+        findings.append(f"Hypotension — low systolic blood pressure: SBP {sbp:.1f} mmHg")
 
     if temp is not None and (temp > 38.5 or temp < 36):
-        findings.append(f"abnormal temperature ({temp:.1f})")
+        temp_f = _celsius_to_fahrenheit(temp)
+        findings.append(
+            f"Temperature instability — abnormal temperature: {temp_f:.1f} °F"
+)
 
     return findings
 
@@ -625,7 +640,8 @@ def build_bire_fixed_clinical_sections(patient_df):
     hr = _round_value(vitals["heart_rate"], 1)
     rr = _round_value(vitals["resp_rate"], 1)
     spo2 = _round_value(vitals["spo2"], 1)
-    temp = _round_value(vitals["temperature"], 1)
+    temp_c = _round_value(vitals["temperature"], 1)
+    temp_f = _celsius_to_fahrenheit(temp_c)
     sbp = _round_value(vitals["sbp"], 1)
     dbp = _round_value(vitals["dbp"], 1)
 
@@ -685,13 +701,12 @@ def build_bire_fixed_clinical_sections(patient_df):
         {findings_text}
 
         Latest Vitals
-        - Heart rate: {hr}
-        - Respiratory rate: {rr}
-        - SpO2: {spo2}
-        - Temperature: {temp}
-        - SBP: {sbp}
-        - DBP: {dbp}
-
+        - Heart rate (HR): {hr} bpm
+        - Respiratory rate (RR): {rr} breaths/min
+        - Oxygen saturation (SpO2): {spo2}%
+        - Temperature: {temp_f} °F
+        - Systolic blood pressure (SBP): {sbp} mmHg
+        - Diastolic blood pressure (DBP): {dbp} mmHg
         Timeline Progression
         - Events observed: {event_count}
         - Event time: {event_time}
