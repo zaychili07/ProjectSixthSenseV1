@@ -371,3 +371,115 @@ def build_clinician_summary_snapshot(patient_df):
         "Field": list(summary_items.keys()),
         "Value": list(summary_items.values()),
     })
+
+def plot_patient_risk_trajectory_with_thresholds(
+    patient_df,
+    patient_id=None,
+    risk_col="pred_proba",
+    timestamp_col="timestamp",
+    event_col="event_now",
+    tier_col="bire_final_tier",
+    watch_threshold=0.40,
+    escalate_threshold=0.60,
+    urgent_threshold=0.80,
+    critical_threshold=0.95,
+):
+    """
+    Plot patient risk trajectory with operational threshold overlays.
+    """
+
+    plot_df = patient_df.sort_values(timestamp_col).copy()
+
+    if patient_id is None and "patient_id" in plot_df.columns:
+        patient_id = plot_df["patient_id"].iloc[0]
+
+    plt.figure(figsize=(16, 6))
+
+
+    # Risk Curve
+    plt.plot(
+        plot_df[timestamp_col],
+        plot_df[risk_col],
+        marker="o",
+        linewidth=3,
+        label="Predicted Risk",
+    )
+
+    # Event Markers
+    if event_col in plot_df.columns:
+
+        event_rows = plot_df[
+            plot_df[event_col] == 1
+        ]
+
+        if not event_rows.empty:
+
+            plt.scatter(
+                event_rows[timestamp_col],
+                event_rows[risk_col],
+                s=250,
+                marker="X",
+                label="Clinical Event",
+            )
+
+    # Threshold Overlays
+    plt.axhline(
+        y=watch_threshold,
+        linestyle="--",
+        linewidth=2,
+        label="WATCH Threshold",
+    )
+
+    plt.axhline(
+        y=escalate_threshold,
+        linestyle="--",
+        linewidth=2,
+        label="ESCALATE Threshold",
+    )
+
+    plt.axhline(
+        y=urgent_threshold,
+        linestyle="--",
+        linewidth=2,
+        label="URGENT Threshold",
+    )
+
+    plt.axhline(
+        y=critical_threshold,
+        linestyle="--",
+        linewidth=2,
+        label="CRITICAL Threshold",
+    )
+
+   
+    # Tier Labels
+    if tier_col in plot_df.columns:
+
+        for _, row in plot_df.iterrows():
+
+            plt.text(
+                row[timestamp_col],
+                row[risk_col] + 0.02,
+                str(row[tier_col]),
+                fontsize=8,
+                rotation=45,
+            )
+
+   
+    # Plot Formatting
+    plt.title(
+        f"BIRE Operational Risk Trajectory — {patient_id}"
+    )
+
+    plt.xlabel("Timestamp")
+    plt.ylabel("Predicted Risk")
+
+    plt.ylim(0, 1.05)
+
+    plt.grid(True)
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+    return plot_df
