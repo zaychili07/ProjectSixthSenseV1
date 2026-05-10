@@ -2,7 +2,7 @@
 
 ### A Clinical Intelligence Engine for Early Deterioration Detection
 
-> **We Detect What Others Miss**
+> **We Detect What Others Miss.**
 > *What happens next… starts quietly.*
 
 ---
