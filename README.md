@@ -91,6 +91,50 @@ Potential future applications include:
 - explainable healthcare AI research
 
 ---
+# ❤️ Why I Started BIRE
+
+To be candid for a moment, before the models, dashboards, intelligence layers, and research ideas, this project started from something I find  personal.
+
+I watched people close to me, including my father, family members, and fellow veterans, go through life altering medical situations like:
+
+- heart attacks
+- strokes
+- cancer related decline
+- sudden deterioration that seemed to come out of nowhere
+
+And honestly, one question kept bothering me:
+
+> “What if there were signs earlier that nobody could see yet?”
+
+Not because doctors or nurses weren't trying.  
+Not because people didn’t care.
+
+Because sometimes deterioration starts quietly.
+
+A small change.  
+Then another.  
+Then suddenly everything changes.
+
+That stayed in my head for a while.
+
+So, I started asking myself some quesitons:
+
+> “What can I do to help prevent these events from occuring?”  
+> “Could an intelligence system recognize patterns humans might miss in real time?”  
+> “Even if it only helped a little… would it be worth trying?”
+
+That search became Project Sixth Sense.
+
+BIRE was never built to replace clinicians.  
+It was built from the belief that earlier visibility could matter.
+
+Even a few minutes earlier.  
+Even one patient earlier.  
+Even one family earlier.
+
+That possibility was enough motivation for me to find an answer.
+For me, this research wont stop here, or slow down. Im going to help others regardless, That is my promise. 
+---
 #  Clinical Philosophy
 
 Traditional monitoring systems are often:
