@@ -694,3 +694,135 @@ def plot_suppression_visibility(
     plt.show()
 
     return plot_df
+
+def build_operational_episode_summary(patient_df):
+    """
+    Build an operational episode summary for a single patient.
+    """
+
+    summary = {}
+
+    summary["Patient ID"] = (
+        patient_df["patient_id"].iloc[0]
+        if "patient_id" in patient_df.columns and not patient_df.empty
+        else None
+    )
+
+    if "alert_episode_id" in patient_df.columns:
+        summary["Total Episodes"] = patient_df["alert_episode_id"].nunique()
+    else:
+        summary["Total Episodes"] = None
+
+    if "timing_category" in patient_df.columns:
+        summary["Predictive Episodes"] = (
+            patient_df["timing_category"]
+            .astype(str)
+            .str.contains("true_predictive", case=False, na=False)
+            .sum()
+        )
+
+        summary["Post-Event Episodes"] = (
+            patient_df["timing_category"]
+            .astype(str)
+            .str.contains("post_event", case=False, na=False)
+            .sum()
+        )
+
+        summary["Early Beyond Horizon Episodes"] = (
+            patient_df["timing_category"]
+            .astype(str)
+            .str.contains("early_beyond", case=False, na=False)
+            .sum()
+        )
+
+    if "bire_final_tier" in patient_df.columns:
+        summary["WATCH Count"] = (patient_df["bire_final_tier"] == "WATCH").sum()
+        summary["Suppressed WATCH Count"] = (
+            patient_df["bire_final_tier"] == "SUPPRESSED_WATCH"
+        ).sum()
+        summary["URGENT Count"] = (patient_df["bire_final_tier"] == "URGENT").sum()
+        summary["CRITICAL Count"] = (
+            patient_df["bire_final_tier"] == "CRITICAL"
+        ).sum()
+
+    if "re_escalate_flag" in patient_df.columns:
+        summary["Re-Escalation Count"] = (
+            patient_df["re_escalate_flag"].fillna(False).astype(bool).sum()
+        )
+
+    if "critical_flag" in patient_df.columns:
+        summary["Critical Flag Count"] = (
+            patient_df["critical_flag"].fillna(False).astype(bool).sum()
+        )
+
+    if "lead_time_min" in patient_df.columns:
+        summary["Max Lead Time (min)"] = patient_df["lead_time_min"].max()
+        summary["Min Lead Time (min)"] = patient_df["lead_time_min"].min()
+
+    return pd.DataFrame({
+        "Metric": list(summary.keys()),
+        "Value": list(summary.values()),
+    })
+def build_gemma_interpretation_view(patient_df):
+    """
+    Build a clinician-readable interpretation summary view.
+    """
+
+    latest_row = (
+        patient_df
+        .sort_values("timestamp")
+        .iloc[-1]
+    )
+
+    interpretation = {}
+
+    interpretation["Patient ID"] = latest_row.get("patient_id")
+
+    interpretation["Current Tier"] = (
+        latest_row.get("bire_final_tier")
+    )
+
+    interpretation["Current State"] = (
+        latest_row.get("bire_state")
+    )
+
+    interpretation["Predicted Risk"] = (
+        round(float(latest_row.get("pred_proba", 0)), 4)
+    )
+
+    interpretation["Lead Time (min)"] = (
+        latest_row.get("lead_time_min")
+    )
+
+    interpretation["Operational Interpretation"] = (
+        latest_row.get(
+            "gemma_operational_interpretation",
+            "No operational interpretation available.",
+        )
+    )
+
+    interpretation["Monitoring Interpretation"] = (
+        latest_row.get(
+            "gemma_monitoring_interpretation",
+            "No monitoring interpretation available.",
+        )
+    )
+
+    interpretation["Post-Event Interpretation"] = (
+        latest_row.get(
+            "gemma_post_event_interpretation",
+            "No post-event interpretation available.",
+        )
+    )
+
+    interpretation["Escalation Reason"] = (
+        latest_row.get(
+            "bire_decision_reason",
+            "No escalation reasoning available.",
+        )
+    )
+
+    return pd.DataFrame({
+        "Field": list(interpretation.keys()),
+        "Value": list(interpretation.values()),
+    })
