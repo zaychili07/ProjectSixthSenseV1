@@ -120,12 +120,12 @@ That stayed in my head for a while.
 So, I started asking myself some quesitons:
 
 > “What can I do to help prevent these events from occuring?”  
-> “Could an intelligence system recognize patterns humans might miss in real time?”  
-> “Even if it only helped a little… would it be worth trying?”
+> “What can I develop to recognize patterns humans might miss in real time?”  
+> “Is this even a possibility to be proactive rather than reactive?”
 
 That search became Project Sixth Sense.
 
-BIRE was never built to replace clinicians.  
+BIRE was created to support clinical staff, and ease their job.  
 It was built from the belief that earlier visibility could matter.
 
 Even a few minutes earlier.  
