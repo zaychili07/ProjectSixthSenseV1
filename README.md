@@ -133,7 +133,7 @@ Even one patient earlier.
 Even one family earlier.
 
 That possibility was enough motivation for me to find an answer.
-For me, this research wont stop here, or slow down. Im going to help others regardless, That is my promise. 
+For me, this research wont stop here, or slow down. I will do my best to help others. That is my promise. 
 ---
 #  Clinical Philosophy
 
