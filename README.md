@@ -1,54 +1,122 @@
-# 🧬 Project Sixth Sense — BIRE  
+# 🧬 Project Sixth Sense — BIRE
+
 ### A Clinical Intelligence Engine for Early Deterioration Detection
 
- *We Detect What Others Miss*  
- *What happens next… starts quietly.*
+> **We Detect What Others Miss**
+> *What happens next… starts quietly.*
 
 ---
 
-BIRE (Bio-Intelligence Risk Engine) is a **time-series clinical intelligence system** designed to detect patient deterioration **before it becomes clinically obvious**.
+# ⚠️ Research Prototype Disclaimer
+
+BIRE is a research and educational prototype intended for:
+
+* temporal intelligence research
+* operational monitoring experimentation
+* clinical deterioration forecasting exploration
+
+BIRE is **NOT**:
+
+* a medical device
+* a diagnostic system
+* a replacement for clinician judgment
+* approved for clinical deployment
+
+Synthetic ICU-style data is used for reproducible demonstration workflows.
+
+---
+
+#  What Is BIRE?
+
+BIRE (**Bio-Intelligence Risk Engine**) is a time-series clinical intelligence system designed to detect patient deterioration **before it becomes clinically obvious**.
 
 Unlike traditional monitoring systems that rely on static thresholds, BIRE analyzes:
 
-- temporal trends  
-- physiological instability  
-- rate-of-change dynamics  
+* temporal physiological trends
+* instability progression
+* rate-of-change behavior
+* deterioration trajectories
+* operational monitoring states
 
-to generate **forward-looking risk signals and low-noise alert episodes**.
+to generate:
+
+* forward-looking deterioration risk
+* low-noise alert episodes
+* operational escalation intelligence
+* clinician-facing surveillance visibility
 
 ---
 
-> **BIRE doesn’t ask:** “Is this abnormal right now?”  
-> **BIRE asks:** “Is this patient about to deteriorate?”
+> **BIRE doesn’t ask:**
+> “Is this abnormal right now?”
+
+> **BIRE asks:**
+> “Is this patient about to deteriorate?”
 
 ---
 
-#  Overview
+#  Clinical Philosophy
 
-BIRE reframes patient monitoring from:
+Traditional monitoring systems are often:
+
+* reactive
+* threshold-driven
+* alarm-heavy
+* difficult to interpret operationally
+
+BIRE reframes monitoring from:
 
 > **reactive threshold detection**
 
-to
+to:
 
 > **proactive physiological intelligence**
 
-Traditional systems trigger alerts **after deterioration has occurred**.  
-BIRE instead detects **early warning signals hidden in temporal patterns**.
+The system is designed around the idea that deterioration is rarely caused by a single abnormal value.
+
+Instead, deterioration emerges through:
+
+* temporal instability
+* physiological drift
+* persistent worsening patterns
+* escalation continuity across time
+
+---
+
+#  Intelligence Layers
+
+BIRE evolved into a layered operational intelligence framework.
+
+| Layer                    | Purpose                            |
+| ------------------------ | ---------------------------------- |
+| **BIL**                  | BIRE Intake Layer                  |
+| **BMS**                  | Mode-aware monitoring logic        |
+| **GSS**                  | Gateway Suppression System         |
+| **IBPIP**                | Personalized baseline intelligence |
+| **BIRE-FI**              | Forecasting intelligence           |
+| **PSR**                  | Patient Surveillance Ranking       |
+| **Gemma Interpretation** | Clinician-facing explanation layer |
 
 ---
 
 #  System Architecture
 
-![system architechure](outputs/figures/system_architechure.png)
+![system architecture](outputs/figures/system_arch.png)
+
+---
+
+#  Pipeline Architecture
+
+![pipeline architecture](outputs/figures/pipeline_arch.png)
+
 ---
 
 # 📊 Results Snapshot
 
-| Metric               | Value              |
-|--------------------|-------------------|
-| Event Detection Rate | **96.69%**        |
-| Median Lead Time     | **405 minutes**   |
+| Metric               | Value               |
+| -------------------- | ------------------- |
+| Event Detection Rate | **96.69%**          |
+| Median Lead Time     | **405 minutes**     |
 | Mean Alert Burden    | **0.372 alerts/hr** |
 | Max Alert Burden     | **1.708 alerts/hr** |
 
@@ -58,15 +126,18 @@ BIRE instead detects **early warning signals hidden in temporal patterns**.
 
 BIRE separates:
 
-- **Risk Prediction**
-- **Alert Generation**
-- **Alert Decision Logic**
+* Risk Prediction
+* Alert Generation
+* Alert Decision Logic
+* Operational Monitoring
+* Escalation Intelligence
 
-Using the **Gateway Suppression System (GSS)** to ensure alerts are:
+The system uses the **Gateway Suppression System (GSS)** to ensure alerts remain:
 
-- meaningful  
-- low-noise  
-- clinically actionable  
+* meaningful
+* low-noise
+* operationally interpretable
+* clinically actionable
 
 ---
 
@@ -94,100 +165,205 @@ Using the **Gateway Suppression System (GSS)** to ensure alerts are:
 
 ---
 
-#  Why This Matters Clinically
+#  Operational Intelligence Dashboard
 
-In real clinical settings, deterioration rarely happens suddenly.  
-It develops gradually through **subtle physiological changes**.
+BIRE includes a clinician-facing operational monitoring dashboard designed to visualize:
 
-Traditional systems:
-
-- react late  
-- generate excessive alerts  
-
----
-
-##  The Problem
-
-- **Delayed intervention** → deterioration already underway  
-- **Alert fatigue** → clinicians ignore alarms  
+* patient deterioration trajectories
+* escalation transitions
+* suppression transparency
+* operational queue behavior
+* episode intelligence
+* monitoring continuity
+* clinician-readable interpretation
 
 ---
 
-##  How BIRE Improves This
+##  Patient Surveillance Ranking (PSR)
 
-BIRE asks:
+The PSR system prioritizes operational concern across patients using:
 
-> “Is this patient trending toward deterioration?”
-
-instead of:
-
-> “Is this value abnormal right now?”
-
----
-
-##  Earlier Detection
-
-By modeling **temporal dynamics**, BIRE identifies deterioration:
-
-- before thresholds are crossed  
-- with meaningful clinical lead time  
+* risk progression
+* instability burden
+* escalation continuity
+* monitoring deterioration
+* operational attention scoring
 
 ---
 
-##  Reduced Alert Fatigue
+##  Operational Risk Trajectory
 
-BIRE uses:
+The operational trajectory layer visualizes:
 
-- persistence-based alerting  
-- episode-based detection  
-
-Result:
-
-- fewer false alerts  
-- higher trust  
-- better usability  
+* deterioration progression
+* threshold transitions
+* WATCH / URGENT / CRITICAL states
+* episode behavior
+* operational escalation continuity
 
 ---
 
-##  Balanced Decision Support
+##  Suppression Visibility
 
-BIRE evaluates:
+BIRE visualizes suppression behavior directly to improve:
 
-- ✔️ event detection  
-- ✔️ lead time  
-- ✔️ alert burden  
-- ✔️ false alerts  
+* operational trust
+* escalation transparency
+* monitoring interpretability
+* clinician reviewability
 
----
+This allows reviewers to understand:
 
-##  Real-World Impact
-
-Potential outcomes:
-
-- earlier intervention  
-- reduced ICU transfers  
-- improved workflow efficiency  
-- clearer clinical insight  
+* what was suppressed
+* why suppression occurred
+* when escalation overrides activated
 
 ---
 
-##  Core Insight
+## ❤️ Vital Sign Monitoring
 
-> Early deterioration is not defined by a single abnormal reading,  
-> but by **how physiology changes over time**.
+Vital trend monitoring visualizes:
 
----
+* HR
+* RR
+* SpO2
+* SBP
 
-#  What Makes BIRE Different
-
-- **Temporal Awareness** → learns patterns over time  
-- **Forward Prediction** → predicts 60 minutes ahead  
-- **Persistence-Based Alerting** → reduces noise  
-- **Clinical Framing** → designed as decision support  
-- **System-Level Thinking** → not just a model  
+across deterioration timelines while aligning physiological changes with operational escalation behavior.
 
 ---
 
-# 🔄 Pipeline Architecture
+##  Operational Episode Intelligence
 
-![pipeline architechure](outputs/figures/pipeline_architechure.png)
+BIRE evaluates deterioration behavior as continuous operational episodes rather than isolated alerts.
+
+Episode intelligence includes:
+
+* escalation continuity
+* suppression persistence
+* re-escalation behavior
+* monitoring transitions
+* post-event surveillance
+
+---
+
+#  Gemma Clinical Interpretation Layer
+
+BIRE includes an interpretation framework for clinician-facing operational summaries.
+
+The interpretation layer is designed to provide:
+
+* deterioration interpretation
+* monitoring rationale
+* escalation explanation
+* post-event operational reasoning
+
+
+Example outputs and screenshots remain included throughout the notebook.
+
+---
+
+#  Synthetic Dataset Support
+
+BIRE includes a synthetic ICU-style data generator for reproducible experimentation.
+
+Synthetic data generation is available through:
+
+```text
+src/bire/data/synthetic_icu_generator.py
+```
+
+No external clinical dataset is required to run the notebook.
+
+---
+
+#  BIL — BIRE Intake Layer
+
+Chapter 26 introduces the:
+
+**BIRE Intake Layer (BIL)**
+
+which acts as the structured ingestion and validation framework for downstream intelligence systems.
+
+BIL supports:
+
+* temporal alignment
+* schema validation
+* operational formatting
+* ingestion standardization
+
+The ingestion framework also supports publicly accessible clinical research datasets, including PhysioNet-based workflows.
+
+PhysioNet reference:
+
+https://physionet.org/
+
+---
+
+#  Running The Project
+
+## 1. Clone Repository
+
+```bash
+git clone https://github.com/zaychili07/ProjectSixthSenseV1.git
+```
+
+---
+
+## 2. Install Requirements
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 3. Run Notebook
+
+Run the primary notebook from top-to-bottom.
+
+If synthetic data is missing, the notebook can generate it automatically.
+
+---
+
+## 4. Optional Gemma Integration
+
+Gemma interpretation support is included in the project architecture.
+
+For runtime stability during demonstration runs, live inference cells may remain disabled by default in the freeze notebook version.
+
+---
+
+#  Core Insight
+
+> Early deterioration is not defined by a single abnormal reading,
+> but by how physiology changes over time.
+
+---
+
+# 🔭 Future Development
+
+Planned future expansion includes:
+
+* multimodal intelligence
+* EHR integration
+* clinician verification workflows
+* adaptive monitoring systems
+* deployment infrastructure
+* real-time streaming support
+* advanced forecasting intelligence
+* operational dashboard refinement
+
+---
+
+# Project Status:
+
+BIRE has evolved from a hackathon prototype into an ongoing long-term operational intelligence research project focused on:
+
+* temporal healthcare intelligence
+* operational monitoring systems
+* deterioration forecasting
+* explainable monitoring intelligence
+* low-noise clinical surveillance
+
+---
