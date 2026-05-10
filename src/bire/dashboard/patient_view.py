@@ -483,3 +483,118 @@ def plot_patient_risk_trajectory_with_thresholds(
     plt.show()
 
     return plot_df
+
+def plot_patient_episode_regions(
+    patient_df,
+    patient_id=None,
+    timestamp_col="timestamp",
+    risk_col="pred_proba",
+    state_col="bire_final_tier",
+):
+    """
+    Plot operational episode regions across the patient timeline.
+    """
+
+    plot_df = (
+        patient_df
+        .sort_values(timestamp_col)
+        .copy()
+    )
+
+    if patient_id is None and "patient_id" in plot_df.columns:
+        patient_id = plot_df["patient_id"].iloc[0]
+
+    plt.figure(figsize=(18, 6))
+
+    # --------------------------------------
+    # Base Risk Curve
+    # --------------------------------------
+
+    plt.plot(
+        plot_df[timestamp_col],
+        plot_df[risk_col],
+        linewidth=3,
+        marker="o",
+        label="Predicted Risk",
+    )
+
+    # --------------------------------------
+    # Operational Region Shading
+    # --------------------------------------
+
+    for idx in range(len(plot_df) - 1):
+
+        current_row = plot_df.iloc[idx]
+
+        start_time = current_row[timestamp_col]
+        end_time = plot_df.iloc[idx + 1][timestamp_col]
+
+        state = current_row.get(state_col)
+
+        alpha = 0.15
+
+        if state == "WATCH":
+
+            plt.axvspan(
+                start_time,
+                end_time,
+                alpha=alpha,
+                label="WATCH Region",
+            )
+
+        elif state == "ESCALATE":
+
+            plt.axvspan(
+                start_time,
+                end_time,
+                alpha=alpha,
+                label="ESCALATE Region",
+            )
+
+        elif state == "URGENT":
+
+            plt.axvspan(
+                start_time,
+                end_time,
+                alpha=alpha,
+                label="URGENT Region",
+            )
+
+        elif state == "CRITICAL":
+
+            plt.axvspan(
+                start_time,
+                end_time,
+                alpha=alpha,
+                label="CRITICAL Region",
+            )
+
+        elif state == "SUPPRESSED_WATCH":
+
+            plt.axvspan(
+                start_time,
+                end_time,
+                alpha=alpha,
+                label="SUPPRESSED Region",
+            )
+
+    # --------------------------------------
+    # Formatting
+    # --------------------------------------
+
+    plt.title(
+        f"BIRE Operational Episode Regions — {patient_id}"
+    )
+
+    plt.xlabel("Timestamp")
+    plt.ylabel("Predicted Risk")
+
+    plt.ylim(0, 1.05)
+
+    plt.grid(True)
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+    return plot_df
