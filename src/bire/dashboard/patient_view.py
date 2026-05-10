@@ -598,3 +598,99 @@ def plot_patient_episode_regions(
     plt.show()
 
     return plot_df
+
+def plot_suppression_visibility(
+    patient_df,
+    patient_id=None,
+    timestamp_col="timestamp",
+    risk_col="pred_proba",
+    suppressed_col="gss_suppressed",
+    override_col="gss_ve_override",
+):
+    """
+    Visualize suppression behavior and escalation overrides.
+    """
+
+    plot_df = (
+        patient_df
+        .sort_values(timestamp_col)
+        .copy()
+    )
+
+    if patient_id is None and "patient_id" in plot_df.columns:
+        patient_id = plot_df["patient_id"].iloc[0]
+
+    plt.figure(figsize=(18, 6))
+
+    # --------------------------------------
+    # Base Risk Curve
+    # --------------------------------------
+
+    plt.plot(
+        plot_df[timestamp_col],
+        plot_df[risk_col],
+        linewidth=3,
+        marker="o",
+        label="Predicted Risk",
+    )
+
+    # --------------------------------------
+    # Suppression Regions
+    # --------------------------------------
+
+    if suppressed_col in plot_df.columns:
+
+        suppressed_rows = (
+            plot_df[plot_df[suppressed_col] == True]
+        )
+
+        for _, row in suppressed_rows.iterrows():
+
+            plt.axvline(
+                x=row[timestamp_col],
+                linestyle="--",
+                linewidth=2,
+                alpha=0.5,
+                label="Suppressed Alert",
+            )
+
+    # --------------------------------------
+    # Override Events
+    # --------------------------------------
+
+    if override_col in plot_df.columns:
+
+        override_rows = (
+            plot_df[plot_df[override_col] == True]
+        )
+
+        if not override_rows.empty:
+
+            plt.scatter(
+                override_rows[timestamp_col],
+                override_rows[risk_col],
+                s=250,
+                marker="X",
+                label="Suppression Override",
+            )
+
+    # --------------------------------------
+    # Formatting
+    # --------------------------------------
+
+    plt.title(
+        f"BIRE Suppression Visibility — {patient_id}"
+    )
+
+    plt.xlabel("Timestamp")
+    plt.ylabel("Predicted Risk")
+
+    plt.ylim(0, 1.05)
+
+    plt.grid(True)
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+    return plot_df
