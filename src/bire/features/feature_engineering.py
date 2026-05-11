@@ -34,11 +34,16 @@ def add_temporal_features(
 
 
 def add_features_all_patients(df, signal_cols, window_size=6):
-    return (
+    result = (
         df.groupby("patient_id", group_keys=False)
-        .apply(lambda x: add_temporal_features(x, signal_cols, window_size))
+        .apply(lambda x: add_temporal_features(x.copy(), signal_cols, window_size))
         .reset_index(drop=True)
     )
+
+    if "patient_id" not in result.columns:
+        result = df[["patient_id"]].reset_index(drop=True).join(result)
+
+    return result
 
 
 def get_feature_columns(df: pd.DataFrame) -> list[str]:

@@ -1,6 +1,7 @@
 import re
 import textwrap
 import pandas as pd
+from pathlib import Path
 #=======================================================
 # Gemma exlaination model. used for producing clean and 
 # readable output from BIRE
@@ -393,15 +394,45 @@ def build_bire_patient_explanation_prompt(patient_df):
     return prompt.strip()
 
 
+def resolve_gemma_model_name(
+    model_name: str | None = None,
+    local_model_path: str | None = None,
+) -> str:
+    """
+    Resolve Gemma model path across environments.
+
+    Priority:
+    1. Explicit model_name
+    2. Explicit local_model_path if it exists
+    3. Kaggle mounted model path if it exists
+    4. Hugging Face fallback model ID
+    """
+    if model_name:
+        return model_name
+
+    if local_model_path and Path(local_model_path).exists():
+        return str(Path(local_model_path))
+
+    kaggle_path = Path(
+        "/kaggle/input/models/google/gemma-4/transformers/gemma-4-e2b-it/1"
+    )
+
+    if kaggle_path.exists():
+        return str(kaggle_path)
+
+    return "distilgpt2"
+
+
 # ============================================================
 # Gemma Loader
 # ============================================================
 
 def load_gemma_model(
-    model_name="/kaggle/input/models/google/gemma-4/transformers/gemma-4-e2b-it/1",
+    model_name: str | None = None,
+    local_model_path: str | None = None,
 ):
     """
-    Load Gemma Transformers model.
+    Load Gemma Transformers model using environment-safe model resolution.
     """
 
     from transformers import (
@@ -411,13 +442,20 @@ def load_gemma_model(
 
     import torch
 
+    resolved_model_name = resolve_gemma_model_name(
+        model_name=model_name,
+        local_model_path=local_model_path,
+    )
+
+    print(f"Loading Gemma model from: {resolved_model_name}")
+
     tokenizer = AutoTokenizer.from_pretrained(
-        model_name
+        resolved_model_name
     )
 
     model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        dtype=torch.float16,
+        resolved_model_name,
+        dtype = torch.float16,
         device_map="auto",
     )
 
