@@ -338,7 +338,7 @@ def apply_gss_mode_aware(
     if policy is None:
         from bire.alerts.gss_config import MODE_AWARE_GSS_POLICY
         policy = MODE_AWARE_GSS_POLICY
-   
+
     import numpy as np
 
     out = df.copy()

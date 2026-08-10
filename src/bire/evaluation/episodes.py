@@ -89,7 +89,7 @@ def build_alert_episodes(
 
             alert = df.loc[idx, alert_col]
 
-           
+
             # START NEW EPISODE
             if alert:
                 if current_episode is None:
@@ -102,8 +102,8 @@ def build_alert_episodes(
 
                 cooldown_counter = 0
 
-            
-           
+
+
             # CONTINUATION OR COOLDOWN
             else:
                 if current_episode is not None:
@@ -119,11 +119,11 @@ def build_alert_episodes(
                 df.loc[idx, "alert_episode_id"] = current_episode
                 df.loc[idx, "alert_episode_active"] = True
 
-   
+
     # Forward fill episode_start_time
     df["episode_start_time"] = df.groupby("alert_episode_id")["episode_start_time"].ffill()
 
-    
+
     # Compute duration (in minutes)
     df["episode_duration_minutes"] = (
         (df[time_col] - df["episode_start_time"])

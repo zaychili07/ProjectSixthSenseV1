@@ -27,12 +27,24 @@ IBPIP_MODE_POLICY = {
     "OUTPATIENT": {"warmup_steps": 3},
 }
 
+def _validate_ibpip_inputs(df, mode_col):
+    required = ["patient_id", "timestamp", mode_col] + SIGNAL_COLS
+    missing = [col for col in required if col not in df.columns]
+
+    if missing:
+        raise ValueError(
+            f"Missing required columns for IBPIP: {missing}. "
+            f"Available columns: {df.columns.tolist()}"
+        )
+
 
 def add_ibpip_features(df, mode_col="bms_mode"):
     df = df.copy()
 
-    # Ensure sorted
-    df = df.sort_values(["patient_id", "timestamp"])
+    _validate_ibpip_inputs(df, mode_col)
+
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+    df = df.sort_values(["patient_id", "timestamp"]).reset_index(drop=True)
 
     ###############################################
     # Step 1 — Row index per patient

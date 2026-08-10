@@ -22,7 +22,7 @@ def build_bire_output_from_patient(
 
     X_latest = latest_row[feature_cols].to_frame().T
     risk_score = float(bire_model.predict_proba(X_latest)[0, 1])
-    
+
     if risk_score >= alert_threshold:
         risk_band = "high"
         alert = True
@@ -104,7 +104,9 @@ def build_bire_output_from_patient(
         "trend_summary": trend_summary,
         "data_quality": data_quality,
     }
-    
+  #   This function builds a structured BIRE output dictionary for a single patient based on their latest data row.
+  #  It calculates the risk score using the provided model, determines the risk band and alert status, identifies the top drivers of risk based on feature deltas,
+  # summarizes recent trends in key vitals, and assesses data quality. The output is designed to be easily consumed for dashboard display or further analysis.
 def summarize_deterioration_strength(patient_df):
     patient_df = patient_df.sort_values("timestamp").copy()
 
@@ -134,13 +136,13 @@ def build_bire_dashboard_markdown(bire_output: dict) -> str:
     return f"""
 # BIRE Clinical Risk Dashboard
 
-**Patient ID:** {bire_output['patient_id']}  
-**Timestamp:** {bire_output['timestamp']}  
+**Patient ID:** {bire_output['patient_id']}
+**Timestamp:** {bire_output['timestamp']}
 
-**Risk Score:** {bire_output['risk_score']:.3f}  
-**Risk Band:** {bire_output['risk_band']}  
-**Alert:** {bire_output['alert']}  
-**Prediction Horizon:** {bire_output['prediction_horizon_minutes']} minutes  
+**Risk Score:** {bire_output['risk_score']:.3f}
+**Risk Band:** {bire_output['risk_band']}
+**Alert:** {bire_output['alert']}
+**Prediction Horizon:** {bire_output['prediction_horizon_minutes']} minutes
 **Data Quality:** {bire_output['data_quality']}
 """.strip()
 

@@ -451,7 +451,7 @@ def plot_patient_risk_trajectory_with_thresholds(
         label="CRITICAL Threshold",
     )
 
-   
+
     # Tier Labels
     if tier_col in plot_df.columns:
 
@@ -465,7 +465,7 @@ def plot_patient_risk_trajectory_with_thresholds(
                 rotation=45,
             )
 
-   
+
     # Plot Formatting
     plt.title(
         f"BIRE Operational Risk Trajectory — {patient_id}"

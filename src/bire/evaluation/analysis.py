@@ -509,7 +509,7 @@ def summarize_alert_burden(
     ).reset_index(drop=True)
 
 # this function will prevent a false alert by sending it as true besides just false using foreward looking targets.
-def summarize_false_alert_episodes( 
+def summarize_false_alert_episodes(
     eval_df: pd.DataFrame,
     patient_col: str = "patient_id",
     time_col: str = "timestamp",
@@ -1109,8 +1109,8 @@ def apply_gss_with_vital_override(
     resp_rate_rise = 2.0,
     heart_rate_rise = 5.0,
     temp_rise = 0.3,
-   
-    
+
+
 ):
     """
     GSS v2: Gateway Suppression System with vital-based override.
@@ -1288,7 +1288,7 @@ def apply_gss_with_delta_override(
     min_delta_signals=2,
     delta_persistence_steps = 1,
     min_alert_spacing_steps = 2,
-    risk_signal_weight=2, # added for GSS 2.5 signal strength scoring 
+    risk_signal_weight=2, # added for GSS 2.5 signal strength scoring
     delta_signal_weight=1, #2.5
     min_signal_score=2, # and 2.5
     early_warning_risk_threshold = 0.35,
@@ -1374,7 +1374,7 @@ def apply_gss_with_delta_override(
                 if "resp_rate_delta" in out.columns:
                    if is_persistent(out, idx, "resp_rate_delta", resp_rate_delta_rise, "rise", steps = delta_persistence_steps):
                        reasons.append("resp_rate_delta_rise")
-                       
+
                 if "heart_rate_delta" in out.columns:
                     if is_persistent(out, idx, "heart_rate_delta", heart_rate_delta_rise, "rise", steps = delta_persistence_steps):
                         reasons.append("heart_rate_delta_rise")
@@ -1383,7 +1383,7 @@ def apply_gss_with_delta_override(
                     if is_persistent(out, idx, "temperature_delta", temp_delta_worsen, "rise", steps = delta_persistence_steps):
                         reasons.append("temp_delta_worsen")
 
-            
+
 
                 if event_col in out.columns and bool(out.at[idx, event_col]):
                     if not reasons:
@@ -1395,7 +1395,7 @@ def apply_gss_with_delta_override(
             signal_score = (
                 risk_signal_weight * len(risk_signals)
                 + delta_signal_weight * len(delta_signals)
-                
+
 )
             out.at[idx, signal_score_col] = signal_score # addeed for v2.5
 
@@ -1410,7 +1410,7 @@ def apply_gss_with_delta_override(
                 or len(delta_signals) >= min_delta_signals
                 or early_warning
 )                # this will modify firing  ↑
-            
+
 
             # =========================
             # GSS v2.4 — Alert Spacing
@@ -1437,7 +1437,7 @@ def apply_gss_with_delta_override(
 
                 # GSS v3.1 — stricter post-event gating
                 if event_col in out.columns and bool(out.at[idx, event_col]):
-                    
+
                     post_event_risk_escalation = (
                         post_event_escalation_enabled
                         and last_alert_risk is not None
@@ -1463,8 +1463,8 @@ def apply_gss_with_delta_override(
                 out.at[idx, suppressed_col] = False
                 out.at[idx, escalation_col] = True
 
-                    
-                
+
+
                 if "initial_alert" in reasons:
                     out.at[idx, escalation_reason_col] = "initial_alert"
                 elif early_warning:
@@ -1476,7 +1476,7 @@ def apply_gss_with_delta_override(
                 out.at[idx, escalation_col] = True
                 last_gss_alert_idx = idx
                 last_alert_risk = current_risk
-                        
+
 
             elif "event_now_override" in reasons:
                 out.at[idx, gss_alert_col] = True
@@ -1571,7 +1571,7 @@ def audit_alert_timing(
                 nearest_delta = np.nan
                 nearest_event_time = pd.NaT
                 timing_category = "no_event_for_patient"
-                   
+
 
         rows.append({
             "patient_id": patient_id,
@@ -1707,7 +1707,7 @@ def get_bms_mode_config(mode: str) -> dict:
             "min_alert_spacing_steps": 2,
             "description": "High-acuity continuous monitoring with stricter post-event re-alerting.",
         },
-        
+
         "er_critical": {
             "risk_threshold": 0.35,
             "early_warning_risk_threshold": 0.50,

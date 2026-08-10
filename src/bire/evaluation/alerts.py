@@ -48,7 +48,7 @@ def summarize_alerts(df: pd.DataFrame) -> pd.DataFrame:
 # =========================================================
 # BMS v2 — Clinical Mode / ESI-Based Thresholding
 # =========================================================
-# 
+#
 BMS_CONFIG = { # Dont forget to move form notebook to backed and make call to it. We are going to make BMS a thing FINALLY!
     "ICU": {
         "threshold": 0.970,
@@ -409,22 +409,22 @@ def apply_gss_velocity_escalation(
         df.loc[df["spo2_delta"] <= -2, score_col] += 2
         df.loc[df["spo2_delta"] <= -3, score_col] += 1  # severe bonus
 
-    
+
     # SBP Scoring
     if "sbp_delta" in df.columns:
         df.loc[df["sbp_delta"] <= -10, score_col] += 2
         df.loc[df["sbp_delta"] <= -15, score_col] += 1
 
-   
+
     # Heart Rate Scoring
     if "heart_rate_delta" in df.columns:
         df.loc[df["heart_rate_delta"] >= 15, score_col] += 1
-    
+
     # Respiratory Rate Scoring
     if "resp_rate_delta" in df.columns:
         df.loc[df["resp_rate_delta"] >= 8, score_col] += 1
 
- 
+
     # Multi-signal bonus
     signal_flags = []
 

@@ -3,7 +3,7 @@ import textwrap
 import pandas as pd
 from pathlib import Path
 #=======================================================
-# Gemma exlaination model. used for producing clean and 
+# Gemma exlaination model. used for producing clean and
 # readable output from BIRE
 #=======================================================
 
@@ -28,7 +28,7 @@ def _celsius_to_fahrenheit(temp_c):
 
     except Exception:
         return temp_c
-        
+
 def _round_value(value, digits=3):
     if value is None:
         return None
@@ -258,8 +258,8 @@ def build_patient_chart_context(
     temp = _round_value(vitals["temperature"], 1)
     sbp = _round_value(vitals["sbp"], 1)
     dbp = _round_value(vitals["dbp"], 1)
-    
-   
+
+
     context = f"""
     PATIENT SNAPSHOT
     Patient ID: {patient_id}
@@ -269,7 +269,7 @@ def build_patient_chart_context(
     Event time: {event_time}
     First meaningful pre-event signal time: {first_meaningful_signal_time}
     Meaningful lead time minutes: {meaningful_lead_time_minutes}
-    
+
     CURRENT BIRE STATE
     Final tier: {final_tier}
     Risk score: {risk_score}
@@ -290,9 +290,9 @@ def build_patient_chart_context(
 
     ABNORMAL FINDINGS
     Abnormal signal count: {abnormal_count}
-    
+
     {abnormal_findings_text}
-    
+
     RISK TRAJECTORY
     Starting risk: {starting_risk}
     Minimum risk: {min_risk}
@@ -331,14 +331,14 @@ def build_bire_patient_explanation_prompt(patient_df):
     Do not say "monitor closely."
     Instead say "may warrant prompt clinical review."
     Do not invent or adjust numeric values. Use only the values provided in Patient facts.
-    
+
     When describing the lifecycle path, preserve the exact order shown in the patient facts. Do not reorder, rename, or invent lifecycle states.
 
     Use actual numbers and findings.
 
     Patient facts:
     {chart_context}
-    
+
     Write a structured clinician-facing explanation.
 
     Use professional clinical-style formatting.
@@ -592,12 +592,12 @@ def clean_gemma_clinical_output(text):
     "}": "",
 
 
-    
+
     # Clinical wording cleanup
-    "requires immediate attention": 
+    "requires immediate attention":
         "may warrant prompt clinical review",
-        
-    "require immediate attention": 
+
+    "require immediate attention":
         "may warrant prompt clinical review",
 
     "Monitor closely for further changes.":
@@ -605,22 +605,22 @@ def clean_gemma_clinical_output(text):
 
     "monitor closely for further changes.":
         "review trend and vital-sign changes in clinical context.",
-       
-     "Prompt clinical review may warrant.": 
+
+     "Prompt clinical review may warrant.":
         "This situation may warrant prompt clinical review.",
-       
-     "clinical intelligent system": 
+
+     "clinical intelligent system":
         "clinical intelligence system",
-        
+
     "necessitating immediate attention":
         "indicating escalating physiological concern",
 
-     "pre-signal": 
+     "pre-signal":
         "pre-event signal",
 
     "instablity": "instability",
 }
-    
+
     for old, new in replacements.items():
         text = text.replace(old, new)
 
@@ -643,7 +643,7 @@ def clean_gemma_clinical_output(text):
         text = text.replace("\n\n\n", "\n\n")
     # Convert European decimal commas to periods
     text = re.sub(r'(\d),(\d)', r'\1.\2', text)
-    
+
     return text.strip()
 
 def build_bire_fixed_clinical_sections(patient_df):
@@ -725,10 +725,10 @@ def build_bire_fixed_clinical_sections(patient_df):
             lead_time_minutes = int(
                 (event_time - first_signal_time).total_seconds() / 60
             )
-            
+
         report = f"""
         BIRE Clinical Intelligence Summary
-        
+
         Current State
         - Patient ID: {patient_id}
         - Final BIRE tier: {final_tier}
@@ -756,9 +756,9 @@ def build_bire_fixed_clinical_sections(patient_df):
         - Meaningful lead time: {lead_time_minutes} minutes
         - Lifecycle path: {lifecycle_path}
         """
-        
+
         return textwrap.dedent(report).strip()
-       
+
 
 def build_bire_interpretation_prompt(patient_df):
     """
@@ -789,7 +789,7 @@ def build_bire_interpretation_prompt(patient_df):
 
     Safety Note
     - State that BIRE is a research prototype and not a diagnosis or treatment recommendation.
-    
+
     Patient facts:
     {chart_context}
     """

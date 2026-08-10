@@ -116,7 +116,7 @@ def patient_level_split(
         raise ValueError("Patient leakage detected between val and test.")
 
     return train_df, val_df, test_df
-    
+
 
 def build_logistic_model(random_state: int = 42):
     return LogisticRegression(

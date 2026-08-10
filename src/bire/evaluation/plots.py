@@ -1035,9 +1035,9 @@ def plot_bire_lifecycle_timeline(
         pre_event_alerts = p[
             (p[time_col] < event_time)
             & (p[risk_col] >= 0.4)
-        
+
         ]
-        
+
         if not pre_event_alerts.empty:
             first_alert_time = pre_event_alerts[time_col].min()
             first_alert_risk = pre_event_alerts.loc[
@@ -1294,3 +1294,217 @@ def plot_bire_lifecycle_heatmap_with_timing(
 
     plt.tight_layout()
     plt.show()
+
+def plot_forecast_escalation_timeline(
+    df,
+    patient_id,
+    patient_col="patient_id",
+    time_col="timestamp",
+    risk_col="pred_proba",
+    figsize=(18, 7),
+):
+    import matplotlib.pyplot as plt
+    import pandas as pd
+
+    required_cols = [
+        patient_col,
+        time_col,
+        risk_col,
+        "forecast_escalation_signal",
+        "bire_fi_trajectory_state",
+        "ibpip_state",
+    ]
+
+    missing = [col for col in required_cols if col not in df.columns]
+
+    if missing:
+        raise ValueError(
+            f"Missing required columns for forecast escalation plot: {missing}"
+        )
+
+    patient_df = df[df[patient_col] == patient_id].copy()
+
+    if patient_df.empty:
+        raise ValueError(f"No rows found for patient_id={patient_id}")
+
+    patient_df[time_col] = pd.to_datetime(patient_df[time_col])
+    patient_df = patient_df.sort_values(time_col)
+
+    plt.figure(figsize=figsize)
+
+    plt.plot(
+        patient_df[time_col],
+        patient_df[risk_col],
+        marker="o",
+    )
+
+    for _, row in patient_df.iterrows():
+        label = (
+            f"{row['forecast_escalation_signal']}\n"
+            f"{row['bire_fi_trajectory_state']}\n"
+            f"{row['ibpip_state']}"
+        )
+
+        plt.text(
+            row[time_col],
+            row[risk_col] + 0.01,
+            label,
+            fontsize=7,
+            rotation=45,
+        )
+
+    plt.title(
+        f"Forecast-Aware Escalation Intelligence — Patient {patient_id}"
+    )
+
+    plt.xlabel("Timestamp")
+    plt.ylabel("Predicted Risk")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+def plot_operational_heatmap(
+    df,
+    patient_col="patient_id",
+    columns=None,
+    top_n=20,
+    figsize=(14, 10),
+):
+    """
+    Plot operational surveillance heatmap.
+
+    Purpose:
+    - visualize operational instability
+    - visualize escalation burden
+    - support command center awareness
+    """
+
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    if columns is None:
+        columns = [
+            "max_risk_60min",
+            "avg_risk_60min",
+            "avg_confidence",
+            "max_uncertainty",
+            "operational_priority_score",
+            "attention_score",
+            "psr_operational_priority_score",
+        ]
+
+    plot_df = (
+        df.sort_values(
+            "psr_operational_priority_score",
+            ascending=False,
+        )
+        .head(top_n)
+        .set_index(patient_col)[columns]
+    )
+
+    plt.figure(figsize=figsize)
+
+    sns.heatmap(
+        plot_df,
+        annot=True,
+        fmt=".2f",
+        cmap="magma",
+    )
+
+    plt.title(
+        "BIRE Operational Surveillance Heatmap",
+        fontsize=16,
+        pad=20,
+    )
+
+    plt.ylabel("Patient ID")
+    plt.xlabel("Operational Metrics")
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_dynamic_queue_cycles(
+    df,
+    cycle_col="movement_cycle",
+    queue_col="queue_status",
+    figsize=(12, 6),
+):
+    """
+    Plot queue burden across simulated operational movement cycles.
+    """
+
+    import matplotlib.pyplot as plt
+
+    plot_df = (
+        df.groupby([cycle_col, queue_col])
+        .size()
+        .reset_index(name="patient_count")
+        .pivot(
+            index=cycle_col,
+            columns=queue_col,
+            values="patient_count",
+        )
+        .fillna(0)
+    )
+
+    ax = plot_df.plot(
+        kind="bar",
+        stacked=True,
+        figsize=figsize,
+    )
+
+    ax.set_title(
+        "BIRE Dynamic Queue Burden Across Movement Cycles",
+        fontsize=14,
+        pad=15,
+    )
+    ax.set_xlabel("Movement Cycle")
+    ax.set_ylabel("Patient Count")
+
+    plt.tight_layout()
+    plt.show()
+
+    return plot_df
+
+def plot_queue_movement_audit(
+    audit_df,
+    movement_col="movement_reason",
+    cycle_col="refresh_cycle",
+    figsize=(10, 6),
+):
+    """
+    Plot queue movement audit results by refresh cycle.
+    """
+
+    import matplotlib.pyplot as plt
+
+    plot_df = (
+        audit_df.groupby([cycle_col, movement_col])
+        .size()
+        .reset_index(name="count")
+        .pivot(
+            index=cycle_col,
+            columns=movement_col,
+            values="count",
+        )
+        .fillna(0)
+    )
+
+    ax = plot_df.plot(
+        kind="bar",
+        stacked=True,
+        figsize=figsize,
+    )
+
+    ax.set_title(
+        "BIRE OS Queue Movement Audit by Refresh Cycle",
+        fontsize=14,
+        pad=15,
+    )
+    ax.set_xlabel("Refresh Cycle")
+    ax.set_ylabel("Patient Count")
+
+    plt.tight_layout()
+    plt.show()
+
+    return plot_df
