@@ -55,6 +55,21 @@ from bire.validation.baseline import (
     write_bire_preplayground_baseline_run_manifest,
 )
 
+from bire.validation.execution import (
+    build_bire_frozen_baseline_measurement_plan,
+    build_bire_frozen_baseline_measurement_plan_summary,
+    build_bire_runtime_measurement_binding_discovery,
+    build_bire_runtime_measurement_binding_discovery_summary,
+    build_bire_runtime_measurement_binding_review,
+    build_bire_runtime_semantic_binding_disposition,
+    build_bire_runtime_evidence_role_resolution,
+    build_bire_runtime_evidence_role_resolution_summary,
+    build_bire_runtime_binding_authority_audit,
+    build_bire_runtime_binding_authority_summary,
+    build_bire_runtime_join_compatibility_audit,
+    build_bire_runtime_join_compatibility_summary,
+    execute_bire_authorized_frozen_baseline_metrics,
+)
 
 __all__ = [
     "build_bire_system_validation_doctrine",
@@ -85,4 +100,17 @@ __all__ = [
     "build_bire_preplayground_baseline_execution_gate",
     "build_bire_preplayground_baseline_run_manifest",
     "write_bire_preplayground_baseline_run_manifest",
+    "build_bire_frozen_baseline_measurement_plan",
+    "build_bire_frozen_baseline_measurement_plan_summary",
+    "build_bire_runtime_measurement_binding_discovery",
+    "build_bire_runtime_measurement_binding_discovery_summary",
+    "build_bire_runtime_measurement_binding_review",
+    "build_bire_runtime_semantic_binding_disposition",
+    "build_bire_runtime_evidence_role_resolution",
+    "build_bire_runtime_evidence_role_resolution_summary",
+    "build_bire_runtime_binding_authority_audit",
+    "build_bire_runtime_binding_authority_summary",
+    "build_bire_runtime_join_compatibility_audit",
+    "build_bire_runtime_join_compatibility_summary",
+    "execute_bire_authorized_frozen_baseline_metrics",
 ]
