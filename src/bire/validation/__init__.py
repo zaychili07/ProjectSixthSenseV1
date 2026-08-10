@@ -71,6 +71,11 @@ from bire.validation.execution import (
     execute_bire_authorized_frozen_baseline_metrics,
 )
 
+from bire.validation.final_review import (
+    build_bire_chapter_69_final_metric_disposition,
+    build_bire_chapter_69_final_verification,
+)
+
 __all__ = [
     "build_bire_system_validation_doctrine",
     "build_bire_system_validation_entry_contract",
@@ -113,4 +118,6 @@ __all__ = [
     "build_bire_runtime_join_compatibility_audit",
     "build_bire_runtime_join_compatibility_summary",
     "execute_bire_authorized_frozen_baseline_metrics",
+    "build_bire_chapter_69_final_metric_disposition",
+    "build_bire_chapter_69_final_verification",
 ]
